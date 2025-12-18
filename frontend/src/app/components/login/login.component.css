@@ -1,0 +1,276 @@
+.login-container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 60px 50px;
+  box-sizing: border-box;
+  background: var(--bg-primary);
+  overflow-y: auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-container {
+  width: 100%;
+  max-width: 90%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 60px;
+  position: relative;
+  z-index: 1;
+}
+
+.logo {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+}
+
+.login-form {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 90%;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.form-control {
+  padding: 12px 0;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid var(--border-color);
+  border-radius: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+  font-family: inherit;
+  width: 100%;
+}
+
+.form-control::placeholder {
+  color: var(--text-placeholder);
+  opacity: 0.5;
+}
+
+.form-control:focus {
+  outline: none;
+  border-bottom-color: transparent;
+  color: var(--text-primary);
+}
+
+.form-control:focus::placeholder {
+  color: var(--text-placeholder);
+  opacity: 0.4;
+}
+
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:hover,
+.form-control:-webkit-autofill:focus,
+.form-control:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--text-primary) !important;
+  -webkit-box-shadow: 0 0 0 30px transparent inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.underline {
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  width: 0;
+  height: 3px;
+  background: var(--text-primary);
+  transition: width 0.4s ease-out;
+}
+
+.form-control:focus ~ .underline {
+  width: 100%;
+  animation: underlineExpand 0.4s ease-out;
+}
+
+@keyframes underlineExpand {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.error-message-container {
+  margin: 16px 0;
+  animation: fadeInDown 0.3s ease-out;
+}
+
+.error-message-text {
+  color: #ff6b6b;
+  font-size: 0.9rem;
+  padding: 12px 16px;
+  background: rgba(255, 107, 107, 0.1);
+  border-left: 3px solid #ff6b6b;
+  border-radius: 4px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.form-error {
+  background: #2a1a1a;
+  border: 1px solid #e74c3c;
+  color: #ff6b6b;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.connection-test {
+  margin: 8px 0;
+}
+
+.test-message {
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.test-message.success {
+  background: #1a2a1a;
+  border: 1px solid #28a745;
+  color: #4ade80;
+}
+
+.test-message.error {
+  background: #2a1a1a;
+  border: 1px solid #e74c3c;
+  color: #ff6b6b;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn {
+  width: 100%;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+  border: 3px solid var(--border-color);
+  color: var(--text-secondary);
+  transition: color 0.4s ease;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  color: var(--text-secondary);
+}
+
+.btn-primary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 3px solid var(--border-color);
+  box-shadow: none;
+}
+
+.button-text {
+  position: relative;
+  z-index: 2;
+  transition: color 0.4s ease;
+}
+
+.button-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 100%;
+  background: var(--text-primary);
+  transition: width 0.6s ease-out;
+  z-index: 1;
+}
+
+.btn-primary.active .button-fill {
+  width: 100%;
+  animation: buttonFill 0.6s ease-out;
+}
+
+.btn-primary.active .button-text {
+  color: var(--bg-primary);
+}
+
+
+@keyframes buttonFill {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .login-container {
+    padding: 40px 30px;
+  }
+
+  .logo-container {
+    margin-bottom: 40px;
+  }
+  
+  .logo-container,
+  .login-form {
+    max-width: 100%;
+  }
+}
+
+/* Ensure proper width on ultra-wide screens */
+@media (min-width: 1920px) {
+  .logo-container,
+  .login-form {
+    max-width: 600px;
+  }
+}
+

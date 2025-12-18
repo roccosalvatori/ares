@@ -1,0 +1,62 @@
+<div class="login-container">
+
+  <div class="logo-container">
+    <img src="assets/svgs/logos/logo.svg" alt="ARES Logo" class="logo">
+  </div>
+  
+  <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+    <div class="form-group">
+      <div class="input-wrapper">
+        <input
+          type="text"
+          id="username"
+          formControlName="username"
+          placeholder="Username"
+          class="form-control"
+        />
+        <span class="underline"></span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div class="input-wrapper">
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          placeholder="Password"
+          class="form-control"
+        />
+        <span class="underline"></span>
+      </div>
+    </div>
+
+    <div class="error-message-container" *ngIf="errorMessage">
+      <div class="error-message-text">
+        {{ errorMessage }}
+      </div>
+    </div>
+
+    <div class="connection-test" *ngIf="connectionTestMessage">
+      <div class="test-message" [class.success]="connectionTestSuccess" [class.error]="!connectionTestSuccess">
+        {{ connectionTestMessage }}
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [class.active]="areFieldsFilled"
+        [disabled]="isLoading || !areFieldsFilled"
+      >
+        <span class="button-text">
+          <span *ngIf="!isLoading">LOGIN</span>
+          <span *ngIf="isLoading">LOGGING IN...</span>
+        </span>
+        <span class="button-fill"></span>
+      </button>
+    </div>
+  </form>
+</div>
+

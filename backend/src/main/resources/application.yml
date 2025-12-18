@@ -1,0 +1,37 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: ares-backend
+  ldap:
+    urls: ${LDAP_URLS:ldap://localhost:389}
+    base: ${LDAP_BASE:dc=example,dc=com}
+    username: ${LDAP_USERNAME:}
+    password: ${LDAP_PASSWORD:}
+    base-environment:
+      java.naming.security.authentication: simple
+
+ares:
+  ldap:
+    user-dn-pattern: ${LDAP_USER_DN_PATTERN:uid={0},ou=people}
+    user-search-base: ${LDAP_USER_SEARCH_BASE:ou=people}
+    user-search-filter: ${LDAP_USER_SEARCH_FILTER:(uid={0})}
+    group-search-base: ${LDAP_GROUP_SEARCH_BASE:ou=groups}
+    group-search-filter: ${LDAP_GROUP_SEARCH_FILTER:(member={0})}
+    group-role-attribute: ${LDAP_GROUP_ROLE_ATTRIBUTE:cn}
+    ad:
+      domain: ${AD_DOMAIN:example.com}
+      url: ${AD_URL:ldap://ad.example.com:389}
+
+jwt:
+  secret: ${JWT_SECRET:your-secret-key-change-in-production-min-256-bits}
+  expiration: 86400000
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.ldap: DEBUG
+

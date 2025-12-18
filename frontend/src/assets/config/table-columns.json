@@ -1,0 +1,69 @@
+{
+  "columns": [
+    {
+      "field": "orderId",
+      "header": "Order ID"
+    },
+    {
+      "field": "isin",
+      "header": "ISIN"
+    },
+    {
+      "field": "bloombergLongTicker",
+      "header": "Bloomberg Ticker"
+    },
+    {
+      "field": "trader",
+      "header": "Trader"
+    },
+    {
+      "field": "book",
+      "header": "Book"
+    },
+    {
+      "field": "status",
+      "header": "Status"
+    },
+    {
+      "field": "instrument",
+      "header": "Instrument"
+    },
+    {
+      "field": "region",
+      "header": "Region"
+    },
+    {
+      "field": "quantity",
+      "header": "Quantity",
+      "type": "number"
+    },
+    {
+      "field": "price",
+      "header": "Price",
+      "type": "decimal"
+    },
+    {
+      "field": "notional",
+      "header": "Notional",
+      "type": "decimal"
+    },
+    {
+      "field": "currency",
+      "header": "Currency"
+    },
+    {
+      "field": "side",
+      "header": "Side"
+    },
+    {
+      "field": "executionTime",
+      "header": "Execution Time",
+      "type": "datetime"
+    },
+    {
+      "field": "exchange",
+      "header": "Exchange"
+    }
+  ]
+}
+
