@@ -1,19 +1,19 @@
-# ARES - Client-Server Web Application
+# ARES - Analytics, Reporting & Executions Status
 
 A client-server web application built with Angular (frontend) and Spring Boot (backend), featuring Active Directory/LDAP authentication.
 
 ## Project Structure
 
 ```
-ARES/
-├── backend/          # Spring Boot backend server
+ares/
+├── backend/
 │   ├── src/
 │   │   ├── main/
 │   │   │   ├── java/com/ares/
 │   │   │   └── resources/
 │   │   └── test/
 │   └── pom.xml
-├── frontend/         # Angular frontend client
+├── frontend/
 │   ├── src/
 │   │   └── app/
 │   ├── angular.json
