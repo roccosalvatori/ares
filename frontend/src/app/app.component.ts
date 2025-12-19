@@ -88,7 +88,7 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
     }
     router-outlet {
       display: block;
-      flex: 1
+      flex: 1;
       width: 33.33%;
     }
     router-outlet.full-width {

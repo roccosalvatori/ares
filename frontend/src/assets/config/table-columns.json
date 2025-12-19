@@ -9,6 +9,10 @@
       "header": "ISIN"
     },
     {
+      "field": "side",
+      "header": "Side"
+    },
+    {
       "field": "bloombergLongTicker",
       "header": "Bloomberg Ticker"
     },
@@ -50,10 +54,6 @@
     {
       "field": "currency",
       "header": "Currency"
-    },
-    {
-      "field": "side",
-      "header": "Side"
     },
     {
       "field": "executionTime",

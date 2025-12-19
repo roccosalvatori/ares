@@ -1,4 +1,4 @@
-import { Component, ViewEncapsulation, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, ViewEncapsulation, OnInit, OnDestroy, AfterViewInit, HostListener, ViewChild, ElementRef, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { trigger, transition, style, animate } from '@angular/animations';
@@ -255,7 +255,7 @@ import { map } from 'rxjs/operators';
           </div>
 
           <!-- Table with drop zones -->
-          <div class="table-wrapper">
+          <div class="table-wrapper" #tableWrapper (scroll)="onScroll($event)">
           <table class="executions-table">
             <thead>
               <tr>
@@ -354,22 +354,27 @@ import { map } from 'rxjs/operators';
               </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let execution of filteredExecutions; let rowIndex = index">
+                <!-- Spacer row for virtual scrolling -->
+                <tr *ngIf="visibleStartIndex > 0" class="virtual-spacer" [style.height.px]="visibleStartIndex * rowHeight">
+                  <td [attr.colspan]="tableColumns.length + (isDraggingFromHidden ? 1 : 0)"></td>
+                </tr>
+                <tr *ngFor="let execution of displayedExecutions; let i = index; trackBy: trackByExecutionId"
+                    [attr.data-row]="visibleStartIndex + i">
                   <td *ngFor="let column of tableColumns; let colIndex = index"
                       [tabindex]="0"
-                      [attr.data-row]="rowIndex"
+                      [attr.data-row]="visibleStartIndex + i"
                       [attr.data-col]="colIndex"
-                      [class.focused]="isFocused(rowIndex, colIndex)"
-                      [class.selected]="isSelected(rowIndex, colIndex)"
-                      [class.selection-top]="isSelectionTop(rowIndex, colIndex)"
-                      [class.selection-bottom]="isSelectionBottom(rowIndex, colIndex)"
-                      [class.selection-left]="isSelectionLeft(rowIndex, colIndex)"
-                      [class.selection-right]="isSelectionRight(rowIndex, colIndex)"
-                      (click)="onCellClick($event, rowIndex, colIndex)"
-                      (mousedown)="onCellMouseDown($event, rowIndex, colIndex)"
-                      (mouseenter)="onCellMouseEnter($event, rowIndex, colIndex)"
-                      (keydown)="onCellKeyDown($event, rowIndex, colIndex)"
-                      (focus)="onCellFocus($event, rowIndex, colIndex)"
+                      [class.focused]="isFocused(visibleStartIndex + i, colIndex)"
+                      [class.selected]="isSelected(visibleStartIndex + i, colIndex)"
+                      [class.selection-top]="isSelectionTop(visibleStartIndex + i, colIndex)"
+                      [class.selection-bottom]="isSelectionBottom(visibleStartIndex + i, colIndex)"
+                      [class.selection-left]="isSelectionLeft(visibleStartIndex + i, colIndex)"
+                      [class.selection-right]="isSelectionRight(visibleStartIndex + i, colIndex)"
+                      (click)="onCellClick($event, visibleStartIndex + i, colIndex)"
+                      (mousedown)="onCellMouseDown($event, visibleStartIndex + i, colIndex)"
+                      (mouseenter)="onCellMouseEnter($event, visibleStartIndex + i, colIndex)"
+                      (keydown)="onCellKeyDown($event, visibleStartIndex + i, colIndex)"
+                      (focus)="onCellFocus($event, visibleStartIndex + i, colIndex)"
                       (blur)="onCellBlur($event)">
                   <span *ngIf="column.type === 'decimal'">{{ getFieldValue(execution, column.field) | number:'1.2-2' }}</span>
                   <span *ngIf="column.type === 'number'">{{ getFieldValue(execution, column.field) | number }}</span>
@@ -381,10 +386,26 @@ import { map } from 'rxjs/operators';
                            class="flag-icon"
                            (error)="onFlagError($event)" />
                     </span>
-                  <span *ngIf="!column.type">{{ getFieldValue(execution, column.field) }}</span>
+                  <span *ngIf="column.field === 'side'" class="side-tag" [class.buy]="getFieldValue(execution, column.field) === 'BUY'" [class.sell]="getFieldValue(execution, column.field) === 'SELL'">
+                    {{ getFieldValue(execution, column.field) }}
+                  </span>
+                  <span *ngIf="column.field === 'instrument'" class="instrument-tag" 
+                        [class.stock]="getFieldValue(execution, column.field) === 'STOCK'"
+                        [class.future]="getFieldValue(execution, column.field) === 'FUTURE'"
+                        [class.option]="getFieldValue(execution, column.field) === 'OPTION'"
+                        [class.strategy]="getFieldValue(execution, column.field) === 'STRATEGY'"
+                        [class.bond]="getFieldValue(execution, column.field) === 'BOND'"
+                        [class.fund]="getFieldValue(execution, column.field) === 'FUND'">
+                    {{ getFieldValue(execution, column.field) }}
+                  </span>
+                  <span *ngIf="!column.type && column.field !== 'side' && column.field !== 'instrument'">{{ getFieldValue(execution, column.field) }}</span>
                 </td>
                   <td *ngIf="isDraggingFromHidden" class="placeholder-cell"></td>
               </tr>
+                <!-- Bottom spacer for virtual scrolling -->
+                <tr *ngIf="visibleEndIndex < filteredExecutions.length" class="virtual-spacer" [style.height.px]="(filteredExecutions.length - visibleEndIndex) * rowHeight">
+                  <td [attr.colspan]="tableColumns.length + (isDraggingFromHidden ? 1 : 0)"></td>
+                </tr>
             </tbody>
           </table>
           </div>
@@ -922,7 +943,7 @@ import { map } from 'rxjs/operators';
     .executions-table-container {
       width: 100%;
       overflow-x: auto;
-      overflow-y: auto;
+      overflow-y: visible;
       flex: 1 1 0;
       min-height: 0;
       display: flex;
@@ -942,20 +963,20 @@ import { map } from 'rxjs/operators';
       flex: 1;
       border: 1px solid var(--border-color);
       border-radius: 12px;
-      overflow: hidden;
+      overflow: visible;
       table-layout: auto;
     }
 
     .executions-table thead {
       position: sticky;
       top: 0;
-      z-index: 10;
+      z-index: 100;
       background: var(--bg-secondary);
     }
 
     .executions-table th {
       padding: 12px 16px;
-      text-align: left;
+      text-align: center;
       font-weight: 600;
       text-transform: uppercase;
       font-size: 0.75rem;
@@ -968,7 +989,10 @@ import { map } from 'rxjs/operators';
       cursor: move;
       user-select: none;
       transition: background-color 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
-      position: relative;
+      position: sticky;
+      top: 0;
+      z-index: 101;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
 
     .executions-table th.has-filter {
@@ -977,7 +1001,6 @@ import { map } from 'rxjs/operators';
 
     .executions-table th .header-content {
       display: inline-block;
-      margin-right: 8px;
     }
 
     .filter-btn {
@@ -1355,6 +1378,62 @@ import { map } from 'rxjs/operators';
       border: 1px solid var(--border-color);
     }
 
+    .side-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: 'Montserrat', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #ffffff;
+    }
+
+    .side-tag.buy {
+      background-color: #0068ff;
+    }
+
+    .side-tag.sell {
+      background-color: #ef4444;
+    }
+
+    .instrument-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: 'Montserrat', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #ffffff;
+    }
+
+    .instrument-tag.stock {
+      background-color: #10b981;
+    }
+
+    .instrument-tag.future {
+      background-color: #6366f1;
+    }
+
+    .instrument-tag.option {
+      background-color: #ec4899;
+    }
+
+    .instrument-tag.strategy {
+      background-color: #14b8a6;
+    }
+
+    .instrument-tag.bond {
+      background-color: #f97316;
+    }
+
+    .instrument-tag.fund {
+      background-color: #a855f7;
+    }
+
     /* Column Manager Styles */
     .column-manager {
       margin-bottom: 16px;
@@ -1557,8 +1636,23 @@ import { map } from 'rxjs/operators';
 
     .table-wrapper {
       flex: 1;
-      overflow: auto;
+      overflow-y: auto;
+      overflow-x: auto;
       min-height: 0;
+      max-height: 100%;
+      position: relative;
+    }
+    
+    .virtual-spacer {
+      padding: 0 !important;
+      border: none !important;
+      display: table-row;
+    }
+    
+    .virtual-spacer td {
+      padding: 0 !important;
+      border: none !important;
+      height: inherit;
     }
 
     /* Enhanced table header for drag-drop */
@@ -1624,7 +1718,7 @@ import { map } from 'rxjs/operators';
     }
   `]
 })
-export class ExecutionsComponent implements OnInit, OnDestroy {
+export class ExecutionsComponent implements OnInit, OnDestroy, AfterViewInit {
   isLoading: boolean = false;
   hasSearched: boolean = false;
   executions: ExecutionData[] = [];
@@ -1680,12 +1774,25 @@ export class ExecutionsComponent implements OnInit, OnDestroy {
 
   executionCountryCodes: Map<number, string> = new Map();
 
+  // Virtual scrolling state
+  @ViewChild('tableWrapper', { static: false }) tableWrapperRef!: ElementRef<HTMLElement>;
+  rowHeight: number = 42; // Approximate height of a table row in pixels
+  headerHeight: number = 50; // Approximate height of table header
+  visibleStartIndex: number = 0;
+  visibleEndIndex: number = 50; // Initial visible rows
+  bufferSize: number = 10; // Extra rows to render above/below viewport
+  displayedExecutions: ExecutionData[] = [];
+  private tableWrapperElement: HTMLElement | null = null;
+  private scrollListenerAdded: boolean = false;
+
   constructor(
     private authService: AuthService,
     private router: Router,
     private configService: ConfigService,
     private executionService: ExecutionService,
-    private micCountryService: MicCountryService
+    private micCountryService: MicCountryService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -1694,8 +1801,133 @@ export class ExecutionsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Cleanup if needed
+    // Cleanup scroll listener
+    if (this.tableWrapperElement) {
+      this.tableWrapperElement.removeEventListener('scroll', this.onScroll.bind(this));
+    }
   }
+  
+  @HostListener('window:resize', ['$event'])
+  onResize(): void {
+    this.updateVisibleRows();
+  }
+  
+  ngAfterViewInit(): void {
+    // Get table wrapper element after view init
+    setTimeout(() => {
+      const element = this.tableWrapperRef?.nativeElement || 
+                     document.querySelector('.table-wrapper') as HTMLElement;
+      
+      if (element) {
+        this.tableWrapperElement = element;
+        // Add programmatic listener as backup to template handler
+        if (!this.scrollListenerAdded) {
+          element.addEventListener('scroll', (e) => this.onScroll(e), { passive: true });
+          this.scrollListenerAdded = true;
+        }
+        // Initial update
+        this.updateVisibleRows();
+      }
+    }, 100);
+  }
+  
+  onScroll(event?: Event): void {
+    // Get the scrollable element
+    let element: HTMLElement | null = null;
+    
+    if (event?.target) {
+      element = event.target as HTMLElement;
+    } else if (this.tableWrapperRef?.nativeElement) {
+      element = this.tableWrapperRef.nativeElement;
+    } else if (this.tableWrapperElement) {
+      element = this.tableWrapperElement;
+    } else {
+      element = document.querySelector('.table-wrapper') as HTMLElement;
+    }
+    
+    if (!element) {
+      return;
+    }
+    
+    // Store reference
+    this.tableWrapperElement = element;
+    
+    // Run in Angular zone to ensure change detection
+    this.ngZone.run(() => {
+      if (this.filteredExecutions.length === 0) {
+        this.displayedExecutions = [];
+        return;
+      }
+      
+      const scrollTop = element!.scrollTop;
+      const containerHeight = element!.clientHeight;
+      
+      // Calculate visible range
+      const startIndex = Math.max(0, Math.floor(scrollTop / this.rowHeight) - this.bufferSize);
+      const endIndex = Math.min(
+        this.filteredExecutions.length,
+        Math.ceil((scrollTop + containerHeight) / this.rowHeight) + this.bufferSize
+      );
+      
+      // Update displayed rows
+      this.visibleStartIndex = startIndex;
+      this.visibleEndIndex = endIndex;
+      this.displayedExecutions = [...this.filteredExecutions.slice(startIndex, endIndex)];
+      
+      // Force change detection
+      this.cdr.detectChanges();
+    });
+  }
+  
+  updateVisibleRows(): void {
+    if (this.filteredExecutions.length === 0) {
+      this.displayedExecutions = [];
+      this.cdr.markForCheck();
+      return;
+    }
+    
+    // Get element reference if not set
+    if (!this.tableWrapperElement) {
+      if (this.tableWrapperRef?.nativeElement) {
+        this.tableWrapperElement = this.tableWrapperRef.nativeElement;
+      } else {
+        this.tableWrapperElement = document.querySelector('.table-wrapper') as HTMLElement;
+      }
+    }
+    
+    // If wrapper element not found yet, show initial rows (fallback)
+    if (!this.tableWrapperElement) {
+      const initialEndIndex = Math.min(this.filteredExecutions.length, this.visibleEndIndex);
+      this.visibleStartIndex = 0;
+      this.visibleEndIndex = initialEndIndex;
+      this.displayedExecutions = [...this.filteredExecutions.slice(0, initialEndIndex)];
+      this.cdr.markForCheck();
+      return;
+    }
+    
+    const scrollTop = this.tableWrapperElement.scrollTop || 0;
+    const containerHeight = this.tableWrapperElement.clientHeight || 500;
+    
+    // Calculate visible range
+    const startIndex = Math.max(0, Math.floor(scrollTop / this.rowHeight) - this.bufferSize);
+    const endIndex = Math.min(
+      this.filteredExecutions.length,
+      Math.ceil((scrollTop + containerHeight) / this.rowHeight) + this.bufferSize
+    );
+    
+    // Always update to ensure changes are reflected
+    this.visibleStartIndex = startIndex;
+    this.visibleEndIndex = endIndex;
+    this.displayedExecutions = [...this.filteredExecutions.slice(startIndex, endIndex)];
+    
+    // Trigger change detection
+    this.cdr.markForCheck();
+  }
+  
+  trackByExecutionId(index: number, execution: ExecutionData): number {
+    return execution.executionId;
+  }
+  
 
   @HostListener('document:mouseup', ['$event'])
   onDocumentMouseUp(event: MouseEvent): void {
@@ -1937,7 +2169,7 @@ export class ExecutionsComponent implements OnInit, OnDestroy {
     console.log('Search clicked');
     
     // Fetch execution data
-    this.executionService.getExecutions(20).subscribe({
+    this.executionService.getExecutions(2000).subscribe({
       next: (data) => {
         this.executions = data;
         this.filteredExecutions = data;
@@ -1945,11 +2177,30 @@ export class ExecutionsComponent implements OnInit, OnDestroy {
         this.initializeFilters();
         this.hasSearched = true;
         this.isLoading = false;
+        // Initialize displayed executions immediately - show first batch
+        this.visibleStartIndex = 0;
+        this.visibleEndIndex = Math.min(this.filteredExecutions.length, 50);
+        this.displayedExecutions = [...this.filteredExecutions.slice(0, this.visibleEndIndex)];
+        
+        // Set up element reference and ensure scroll handler works
+        setTimeout(() => {
+          if (this.tableWrapperRef?.nativeElement) {
+            this.tableWrapperElement = this.tableWrapperRef.nativeElement;
+          } else {
+            const wrapper = document.querySelector('.table-wrapper') as HTMLElement;
+            if (wrapper) {
+              this.tableWrapperElement = wrapper;
+            }
+          }
+          // Force change detection after setup
+          this.cdr.detectChanges();
+        }, 0);
       },
       error: (error) => {
         console.error('Error fetching executions:', error);
         this.executions = [];
         this.filteredExecutions = [];
+        this.displayedExecutions = [];
         this.hasSearched = true;
         this.isLoading = false;
       }
@@ -2068,6 +2319,10 @@ export class ExecutionsComponent implements OnInit, OnDestroy {
         if (newRow < this.filteredExecutions.length - 1) {
           newRow++;
           shouldMove = true;
+          // Ensure the new row is visible in virtual scroll
+          if (newRow >= this.visibleEndIndex) {
+            this.scrollToRow(newRow);
+          }
         }
         break;
       case 'ArrowLeft':
@@ -2524,6 +2779,12 @@ export class ExecutionsComponent implements OnInit, OnDestroy {
     });
 
     this.filteredExecutions = filtered;
+    // Reset scroll position and update virtual scrolling after filtering
+    this.visibleStartIndex = 0;
+    if (this.tableWrapperElement) {
+      this.tableWrapperElement.scrollTop = 0;
+    }
+    this.updateVisibleRows();
   }
 
   // Set cell value (for paste functionality)
@@ -2703,6 +2964,15 @@ export class ExecutionsComponent implements OnInit, OnDestroy {
     this.isDraggingFromHidden = false;
     this.isOverHiddenArea = false;
     this.isOverEndZone = false;
+  }
+  
+  // Scroll to a specific row in virtual scroll
+  scrollToRow(rowIndex: number): void {
+    if (this.tableWrapperElement) {
+      const scrollTop = rowIndex * this.rowHeight;
+      this.tableWrapperElement.scrollTop = scrollTop;
+      this.updateVisibleRows();
+    }
   }
 }
 
