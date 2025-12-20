@@ -2,7 +2,9 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit, Cha
 import { CommonModule } from '@angular/common';
 import { NavbarComponent } from '../navbar/navbar.component';
 import { ExecutionService, ExecutionData } from '../../services/execution.service';
+import { ThemeService } from '../../services/theme.service';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { Subscription } from 'rxjs';
 
 Chart.register(...registerables);
 
@@ -15,8 +17,43 @@ Chart.register(...registerables);
     <app-navbar></app-navbar>
     <div class="dashboard-container">
       <div class="dashboard-content">
+        <!-- World Clocks -->
+        <div class="clocks-row">
+          <div class="bento-card clock-card">
+            <div class="clock-content">
+              <div class="clock-city">Paris</div>
+              <div class="clock-time">{{ parisTime }}</div>
+            </div>
+          </div>
+          <div class="bento-card clock-card">
+            <div class="clock-content">
+              <div class="clock-city">New York</div>
+              <div class="clock-time">{{ newYorkTime }}</div>
+            </div>
+          </div>
+          <div class="bento-card clock-card">
+            <div class="clock-content">
+              <div class="clock-city">Tokyo</div>
+              <div class="clock-time">{{ tokyoTime }}</div>
+            </div>
+          </div>
+          <div class="bento-card clock-card">
+            <div class="clock-content">
+              <div class="clock-city">Hong Kong</div>
+              <div class="clock-time">{{ hongKongTime }}</div>
+            </div>
+          </div>
+        </div>
+
         <!-- Stats Row - Digit Only Boxes -->
         <div class="stats-row">
+          <div class="bento-card stats-card total-executions">
+            <div class="card-content">
+              <div class="card-label">Total Executions</div>
+              <div class="card-value total-value">{{ totalExecutions | number }}</div>
+            </div>
+          </div>
+
           <div class="bento-card stats-card ack-executions">
             <div class="card-content">
               <div class="card-label">ACK</div>
@@ -157,6 +194,56 @@ Chart.register(...registerables);
               <canvas #booksChart></canvas>
             </div>
           </div>
+
+          <!-- Time-in-Force Distribution Chart -->
+          <div class="bento-card chart-card timeInForce-chart-card">
+            <div class="chart-header">
+              <h3>Time-in-Force Distribution</h3>
+            </div>
+            <div class="chart-container">
+              <canvas #timeInForceChart></canvas>
+            </div>
+          </div>
+
+          <!-- Exchange Distribution Chart -->
+          <div class="bento-card chart-card exchange-chart-card">
+            <div class="chart-header">
+              <h3>Exchange Distribution</h3>
+            </div>
+            <div class="chart-container">
+              <canvas #exchangeChart></canvas>
+            </div>
+          </div>
+
+          <!-- Sector Distribution Chart -->
+          <div class="bento-card chart-card sector-chart-card">
+            <div class="chart-header">
+              <h3>Sector Distribution</h3>
+            </div>
+            <div class="chart-container">
+              <canvas #sectorChart></canvas>
+            </div>
+          </div>
+
+          <!-- Top Portfolios by Notional Chart -->
+          <div class="bento-card chart-card portfolio-chart-card">
+            <div class="chart-header">
+              <h3>Top Portfolios by Notional Value</h3>
+            </div>
+            <div class="chart-container">
+              <canvas #portfolioChart></canvas>
+            </div>
+          </div>
+
+          <!-- Notional Value Distribution Chart -->
+          <div class="bento-card chart-card notional-chart-card">
+            <div class="chart-header">
+              <h3>Notional Value Distribution</h3>
+            </div>
+            <div class="chart-container">
+              <canvas #notionalChart></canvas>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -211,14 +298,51 @@ Chart.register(...registerables);
       display: flex;
       flex-direction: column;
       gap: 20px;
+      max-width: 100%;
+    }
+
+    .clocks-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      width: 100%;
+    }
+
+    .clock-card {
+      height: 70px;
+      min-height: 70px;
+      padding: 12px 16px !important;
+    }
+
+    .clock-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      gap: 4px;
+    }
+
+    .clock-city {
+      font-size: 0.75rem;
+      color: var(--text-placeholder);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+
+    .clock-time {
+      font-size: 1.5rem;
+      color: #FB8B1E;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 1px;
     }
 
     .stats-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 16px;
-      max-width: 1600px;
-      margin: 0 auto;
       width: 100%;
     }
 
@@ -226,14 +350,12 @@ Chart.register(...registerables);
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 16px;
-      max-width: 1600px;
-      margin: 0 auto;
       width: 100%;
     }
 
     .bento-card {
-      background-color: #0f0f0f;
-      border: 1px solid #1a1a1a;
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
       border-radius: 12px;
       padding: 16px;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -244,7 +366,7 @@ Chart.register(...registerables);
     .bento-card:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      border-color: #2a2a2a;
+      border-color: var(--border-hover);
     }
 
     /* Stats Cards */
@@ -256,11 +378,16 @@ Chart.register(...registerables);
       min-height: 60px;
     }
 
+    .stats-card.total-executions,
     .stats-card.ack-executions,
     .stats-card.non-ack-executions {
       height: 60px;
       min-height: 60px;
       padding: 8px 12px !important;
+    }
+
+    .stats-card.total-executions .card-value {
+      color: #FB8B1E;
     }
 
     .stats-card.ack-executions .card-value {
@@ -281,7 +408,7 @@ Chart.register(...registerables);
     .card-label {
       font-size: 0.65rem;
       font-weight: 500;
-      color: #999999;
+      color: var(--text-placeholder);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       font-family: 'Montserrat', sans-serif;
@@ -291,7 +418,7 @@ Chart.register(...registerables);
     .card-value {
       font-size: 1.25rem;
       font-weight: 700;
-      color: #ffffff;
+      color: var(--text-primary);
       font-family: 'Montserrat', sans-serif;
       line-height: 1;
     }
@@ -314,7 +441,7 @@ Chart.register(...registerables);
     .proportion-bar {
       width: 100%;
       height: 6px;
-      background-color: #1a1a1a;
+      background-color: var(--bg-tertiary);
       border-radius: 3px;
       overflow: hidden;
       margin-top: 4px;
@@ -346,6 +473,7 @@ Chart.register(...registerables);
 
     .proportion-label {
       font-weight: 500;
+      color: var(--text-secondary);
     }
 
     .proportion-label.ack-label {
@@ -365,7 +493,9 @@ Chart.register(...registerables);
 
     .chart-card.donut-chart-card,
     .chart-card.status-chart-card,
-    .chart-card.region-chart-card {
+    .chart-card.region-chart-card,
+    .chart-card.timeInForce-chart-card,
+    .chart-card.sector-chart-card {
       grid-column: span 1;
     }
 
@@ -375,7 +505,10 @@ Chart.register(...registerables);
     .chart-card.traders-chart-card,
     .chart-card.order-type-chart-card,
     .chart-card.currency-chart-card,
-    .chart-card.books-chart-card {
+    .chart-card.books-chart-card,
+    .chart-card.exchange-chart-card,
+    .chart-card.portfolio-chart-card,
+    .chart-card.notional-chart-card {
       grid-column: span 1;
     }
 
@@ -406,7 +539,7 @@ Chart.register(...registerables);
     .chart-header h3 {
       font-size: 0.8rem;
       font-weight: 600;
-      color: #ffffff;
+      color: var(--text-primary);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       font-family: 'Montserrat', sans-serif;
@@ -441,6 +574,21 @@ Chart.register(...registerables);
         gap: 16px;
       }
 
+      .clocks-row {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+      }
+
+      .clock-card {
+        height: 65px;
+        min-height: 65px;
+        padding: 10px 12px !important;
+      }
+
+      .clock-time {
+        font-size: 1.25rem;
+      }
+
       .stats-row {
         grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
         gap: 12px;
@@ -455,6 +603,7 @@ Chart.register(...registerables);
         padding: 14px;
       }
 
+      .stats-card.total-executions,
       .stats-card.ack-executions,
       .stats-card.non-ack-executions {
         padding: 6px 10px !important;
@@ -489,6 +638,25 @@ Chart.register(...registerables);
         gap: 12px;
       }
 
+      .clocks-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+
+      .clock-card {
+        height: 60px;
+        min-height: 60px;
+        padding: 8px 10px !important;
+      }
+
+      .clock-city {
+        font-size: 0.7rem;
+      }
+
+      .clock-time {
+        font-size: 1.1rem;
+      }
+
       .stats-row {
         grid-template-columns: 1fr;
         gap: 10px;
@@ -508,6 +676,7 @@ Chart.register(...registerables);
         min-height: 50px;
       }
 
+      .stats-card.total-executions,
       .stats-card.ack-executions,
       .stats-card.non-ack-executions {
         padding: 6px 8px !important;
@@ -539,11 +708,23 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
   @ViewChild('currencyChart') currencyChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('booksChart') booksChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('hourlyChart') hourlyChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('timeInForceChart') timeInForceChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('exchangeChart') exchangeChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('sectorChart') sectorChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('portfolioChart') portfolioChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('notionalChart') notionalChartRef!: ElementRef<HTMLCanvasElement>;
 
   executions: ExecutionData[] = [];
   totalExecutions: number = 0;
   ackExecutions: number = 0;
   nonAckExecutions: number = 0;
+
+  parisTime: string = '';
+  newYorkTime: string = '';
+  tokyoTime: string = '';
+  hongKongTime: string = '';
+
+  private clockInterval: any;
 
   private donutChart: Chart | null = null;
   private histogramChart: Chart | null = null;
@@ -556,14 +737,38 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
   private currencyChart: Chart | null = null;
   private booksChart: Chart | null = null;
   private hourlyChart: Chart | null = null;
+  private timeInForceChart: Chart | null = null;
+  private exchangeChart: Chart | null = null;
+  private sectorChart: Chart | null = null;
+  private portfolioChart: Chart | null = null;
+  private notionalChart: Chart | null = null;
+
+  private themeSubscription?: Subscription;
+  isLightMode: boolean = false;
 
   constructor(
     private executionService: ExecutionService,
-    private cdr: ChangeDetectorRef
-  ) {}
+    private cdr: ChangeDetectorRef,
+    private themeService: ThemeService
+  ) {
+    this.isLightMode = this.themeService.isLightMode();
+  }
 
   ngOnInit(): void {
     this.loadExecutions();
+    this.updateClocks();
+    this.clockInterval = setInterval(() => {
+      this.updateClocks();
+    }, 1000);
+    
+    // Subscribe to theme changes
+    this.themeSubscription = this.themeService.isLightMode$.subscribe(isLight => {
+      this.isLightMode = isLight;
+      // Reinitialize charts with new theme colors
+      if (this.executions.length > 0) {
+        this.initializeCharts();
+      }
+    });
   }
 
   ngAfterViewInit(): void {
@@ -571,6 +776,12 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
   }
 
   ngOnDestroy(): void {
+    if (this.clockInterval) {
+      clearInterval(this.clockInterval);
+    }
+    if (this.themeSubscription) {
+      this.themeSubscription.unsubscribe();
+    }
     if (this.donutChart) this.donutChart.destroy();
     if (this.histogramChart) this.histogramChart.destroy();
     if (this.barChart) this.barChart.destroy();
@@ -582,6 +793,11 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
     if (this.currencyChart) this.currencyChart.destroy();
     if (this.booksChart) this.booksChart.destroy();
     if (this.hourlyChart) this.hourlyChart.destroy();
+    if (this.timeInForceChart) this.timeInForceChart.destroy();
+    if (this.exchangeChart) this.exchangeChart.destroy();
+    if (this.sectorChart) this.sectorChart.destroy();
+    if (this.portfolioChart) this.portfolioChart.destroy();
+    if (this.notionalChart) this.notionalChart.destroy();
   }
 
   loadExecutions(): void {
@@ -619,6 +835,46 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
     return (this.nonAckExecutions / this.totalExecutions) * 100;
   }
 
+  updateClocks(): void {
+    const now = new Date();
+    
+    // Paris (Europe/Paris)
+    this.parisTime = now.toLocaleTimeString('en-US', {
+      timeZone: 'Europe/Paris',
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    // New York (America/New_York)
+    this.newYorkTime = now.toLocaleTimeString('en-US', {
+      timeZone: 'America/New_York',
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    // Tokyo (Asia/Tokyo)
+    this.tokyoTime = now.toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Tokyo',
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    // Hong Kong (Asia/Hong_Kong)
+    this.hongKongTime = now.toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Hong_Kong',
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  }
+
   initializeCharts(): void {
     const refs = [
       this.donutChartRef,
@@ -631,7 +887,12 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
       this.orderTypeChartRef,
       this.currencyChartRef,
       this.booksChartRef,
-      this.hourlyChartRef
+      this.hourlyChartRef,
+      this.timeInForceChartRef,
+      this.exchangeChartRef,
+      this.sectorChartRef,
+      this.portfolioChartRef,
+      this.notionalChartRef
     ];
     
     if (refs.some(ref => !ref?.nativeElement)) {
@@ -650,6 +911,11 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
     this.createCurrencyChart();
     this.createBooksChart();
     this.createHourlyChart();
+    this.createTimeInForceChart();
+    this.createExchangeChart();
+    this.createSectorChart();
+    this.createPortfolioChart();
+    this.createNotionalChart();
   }
 
   createDonutChart(): void {
@@ -701,7 +967,7 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
           legend: {
             position: 'right',
             labels: {
-              color: '#ffffff',
+              color: this.getThemeColors().textPrimary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 11
@@ -711,10 +977,10 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
             }
           },
           tooltip: {
-            backgroundColor: '#0f0f0f',
-            titleColor: '#ffffff',
-            bodyColor: '#cccccc',
-            borderColor: '#1a1a1a',
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
             borderWidth: 1,
             padding: 12,
             titleFont: {
@@ -773,10 +1039,10 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
             display: false
           },
           tooltip: {
-            backgroundColor: '#0f0f0f',
-            titleColor: '#ffffff',
-            bodyColor: '#cccccc',
-            borderColor: '#1a1a1a',
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
             borderWidth: 1,
             padding: 12,
             titleFont: {
@@ -791,27 +1057,27 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
           x: {
             beginAtZero: true,
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 11
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           },
           y: {
             beginAtZero: true,
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 11
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           }
         }
@@ -864,10 +1130,10 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
             display: false
           },
           tooltip: {
-            backgroundColor: '#0f0f0f',
-            titleColor: '#ffffff',
-            bodyColor: '#cccccc',
-            borderColor: '#1a1a1a',
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
             borderWidth: 1,
             padding: 12,
             titleFont: {
@@ -882,26 +1148,26 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
           x: {
             beginAtZero: true,
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 11
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           },
           y: {
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 10
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           }
         }
@@ -926,7 +1192,21 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
 
     const labels = Array.from(statusCounts.keys());
     const data = Array.from(statusCounts.values());
-    const colors = this.generateColors(labels.length);
+    
+    // Use the same color codes as the status filter in executions component
+    const statusColors: { [key: string]: string } = {
+      'ACK': '#22c55e',
+      'ANO': '#3b82f6',
+      'TIMEOUT': '#f59e0b',
+      'FILTERED': '#8b5cf6',
+      'PENDING': '#06b6d4',
+      'IGNORED': '#6b7280',
+      'ERROR': '#ef4444',
+      'REJECTED': '#ef4444' // Use error color for rejected
+    };
+    
+    const backgroundColor = labels.map(label => statusColors[label.toUpperCase()] || 'rgba(251, 139, 30, 0.6)');
+    const borderColor = backgroundColor.map(() => 'transparent');
 
     const config: ChartConfiguration = {
       type: 'doughnut',
@@ -934,8 +1214,8 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
         labels: labels,
         datasets: [{
           data: data,
-          backgroundColor: colors.background,
-          borderColor: colors.border,
+          backgroundColor: backgroundColor,
+          borderColor: borderColor,
           borderWidth: 0
         }]
       },
@@ -948,7 +1228,7 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
           legend: {
             position: 'right',
             labels: {
-              color: '#ffffff',
+              color: this.getThemeColors().textPrimary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 10
@@ -958,10 +1238,10 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
             }
           },
           tooltip: {
-            backgroundColor: '#0f0f0f',
-            titleColor: '#ffffff',
-            bodyColor: '#cccccc',
-            borderColor: '#1a1a1a',
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
             borderWidth: 1,
             padding: 12,
             titleFont: {
@@ -1017,10 +1297,10 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
             display: false
           },
           tooltip: {
-            backgroundColor: '#0f0f0f',
-            titleColor: '#ffffff',
-            bodyColor: '#cccccc',
-            borderColor: '#1a1a1a',
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
             borderWidth: 1,
             padding: 12,
             titleFont: {
@@ -1035,26 +1315,26 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
           x: {
             beginAtZero: true,
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 10
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           },
           y: {
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 10
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           }
         }
@@ -1106,10 +1386,10 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
             display: false
           },
           tooltip: {
-            backgroundColor: '#0f0f0f',
-            titleColor: '#ffffff',
-            bodyColor: '#cccccc',
-            borderColor: '#1a1a1a',
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
             borderWidth: 1,
             padding: 12,
             titleFont: {
@@ -1124,27 +1404,27 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
           x: {
             beginAtZero: true,
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 10
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           },
           y: {
             beginAtZero: true,
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 9
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           }
         }
@@ -1191,7 +1471,7 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
           legend: {
             position: 'right',
             labels: {
-              color: '#ffffff',
+              color: this.getThemeColors().textPrimary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 10
@@ -1201,10 +1481,10 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
             }
           },
           tooltip: {
-            backgroundColor: '#0f0f0f',
-            titleColor: '#ffffff',
-            bodyColor: '#cccccc',
-            borderColor: '#1a1a1a',
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
             borderWidth: 1,
             padding: 12,
             titleFont: {
@@ -1263,10 +1543,10 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
             display: false
           },
           tooltip: {
-            backgroundColor: '#0f0f0f',
-            titleColor: '#ffffff',
-            bodyColor: '#cccccc',
-            borderColor: '#1a1a1a',
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
             borderWidth: 1,
             padding: 12,
             titleFont: {
@@ -1281,27 +1561,27 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
           x: {
             beginAtZero: true,
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 10
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           },
           y: {
             beginAtZero: true,
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 10
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           }
         }
@@ -1354,10 +1634,10 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
             display: false
           },
           tooltip: {
-            backgroundColor: '#0f0f0f',
-            titleColor: '#ffffff',
-            bodyColor: '#cccccc',
-            borderColor: '#1a1a1a',
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
             borderWidth: 1,
             padding: 12,
             titleFont: {
@@ -1372,26 +1652,26 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
           x: {
             beginAtZero: true,
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 10
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           },
           y: {
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 10
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           }
         }
@@ -1443,10 +1723,10 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
             display: false
           },
           tooltip: {
-            backgroundColor: '#0f0f0f',
-            titleColor: '#ffffff',
-            bodyColor: '#cccccc',
-            borderColor: '#1a1a1a',
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
             borderWidth: 1,
             padding: 12,
             titleFont: {
@@ -1461,27 +1741,27 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
           x: {
             beginAtZero: true,
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 10
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           },
           y: {
             beginAtZero: true,
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 9
               }
             },
             grid: {
-              color: '#1a1a1a'
+              color: this.getThemeColors().gridColor
             }
           }
         }
@@ -1547,10 +1827,10 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
             display: false
           },
           tooltip: {
-            backgroundColor: '#0f0f0f',
-            titleColor: '#ffffff',
-            bodyColor: '#cccccc',
-            borderColor: '#1a1a1a',
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
             borderWidth: 1,
             padding: 10,
             titleFont: {
@@ -1567,7 +1847,7 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
           x: {
             beginAtZero: true,
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 8
@@ -1583,7 +1863,7 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
           y: {
             beginAtZero: true,
             ticks: {
-              color: '#cccccc',
+              color: this.getThemeColors().textSecondary,
               font: {
                 family: 'Montserrat, sans-serif',
                 size: 8
@@ -1599,6 +1879,457 @@ export class DashboardOverviewComponent implements OnInit, AfterViewInit, OnDest
     };
 
     this.hourlyChart = new Chart(this.hourlyChartRef.nativeElement, config);
+  }
+
+  createTimeInForceChart(): void {
+    if (!this.timeInForceChartRef?.nativeElement) return;
+    
+    if (this.timeInForceChart) {
+      this.timeInForceChart.destroy();
+    }
+
+    const tifCounts = new Map<string, number>();
+    this.executions.forEach(exec => {
+      const tif = exec.timeInForce || 'UNKNOWN';
+      tifCounts.set(tif, (tifCounts.get(tif) || 0) + 1);
+    });
+
+    const labels = Array.from(tifCounts.keys());
+    const data = Array.from(tifCounts.values());
+    const colors = this.generateColors(labels.length);
+
+    const config: ChartConfiguration = {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors.background,
+          borderColor: colors.border,
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        // @ts-ignore
+        cutout: '65%',
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              color: this.getThemeColors().textPrimary,
+              font: {
+                family: 'Montserrat, sans-serif',
+                size: 10
+              },
+              padding: 10,
+              usePointStyle: true
+            }
+          },
+          tooltip: {
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
+            borderWidth: 1,
+            padding: 12,
+            titleFont: {
+              family: 'Montserrat, sans-serif'
+            },
+            bodyFont: {
+              family: 'Montserrat, sans-serif'
+            }
+          }
+        }
+      }
+    };
+
+    this.timeInForceChart = new Chart(this.timeInForceChartRef.nativeElement, config);
+  }
+
+  createExchangeChart(): void {
+    if (!this.exchangeChartRef?.nativeElement) return;
+    
+    if (this.exchangeChart) {
+      this.exchangeChart.destroy();
+    }
+
+    const exchangeCounts = new Map<string, number>();
+    this.executions.forEach(exec => {
+      const exchange = exec.exchange || 'UNKNOWN';
+      exchangeCounts.set(exchange, (exchangeCounts.get(exchange) || 0) + 1);
+    });
+
+    const sortedExchanges = Array.from(exchangeCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    const labels = sortedExchanges.map(([exchange]) => exchange);
+    const data = sortedExchanges.map(([, count]) => count);
+    const colors = this.generateColors(labels.length);
+
+    const config: ChartConfiguration = {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Executions',
+          data: data,
+          backgroundColor: colors.background,
+          borderColor: colors.border,
+          borderWidth: 0,
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
+            borderWidth: 1,
+            padding: 12,
+            titleFont: {
+              family: 'Montserrat, sans-serif'
+            },
+            bodyFont: {
+              family: 'Montserrat, sans-serif'
+            }
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: {
+              color: this.getThemeColors().textSecondary,
+              font: {
+                family: 'Montserrat, sans-serif',
+                size: 10
+              }
+            },
+            grid: {
+              color: this.getThemeColors().gridColor
+            }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: this.getThemeColors().textSecondary,
+              font: {
+                family: 'Montserrat, sans-serif',
+                size: 10
+              }
+            },
+            grid: {
+              color: this.getThemeColors().gridColor
+            }
+          }
+        }
+      }
+    };
+
+    this.exchangeChart = new Chart(this.exchangeChartRef.nativeElement, config);
+  }
+
+  createSectorChart(): void {
+    if (!this.sectorChartRef?.nativeElement) return;
+    
+    if (this.sectorChart) {
+      this.sectorChart.destroy();
+    }
+
+    const sectorCounts = new Map<string, number>();
+    this.executions.forEach(exec => {
+      const sector = exec.sector || 'UNKNOWN';
+      sectorCounts.set(sector, (sectorCounts.get(sector) || 0) + 1);
+    });
+
+    const labels = Array.from(sectorCounts.keys());
+    const data = Array.from(sectorCounts.values());
+    const colors = this.generateColors(labels.length);
+
+    const config: ChartConfiguration = {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors.background,
+          borderColor: colors.border,
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        // @ts-ignore
+        cutout: '65%',
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              color: this.getThemeColors().textPrimary,
+              font: {
+                family: 'Montserrat, sans-serif',
+                size: 10
+              },
+              padding: 10,
+              usePointStyle: true
+            }
+          },
+          tooltip: {
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
+            borderWidth: 1,
+            padding: 12,
+            titleFont: {
+              family: 'Montserrat, sans-serif'
+            },
+            bodyFont: {
+              family: 'Montserrat, sans-serif'
+            }
+          }
+        }
+      }
+    };
+
+    this.sectorChart = new Chart(this.sectorChartRef.nativeElement, config);
+  }
+
+  createPortfolioChart(): void {
+    if (!this.portfolioChartRef?.nativeElement) return;
+    
+    if (this.portfolioChart) {
+      this.portfolioChart.destroy();
+    }
+
+    const portfolioNotionals = new Map<string, number>();
+    this.executions.forEach(exec => {
+      const portfolio = exec.portfolio || 'UNKNOWN';
+      const notional = exec.notional || 0;
+      portfolioNotionals.set(portfolio, (portfolioNotionals.get(portfolio) || 0) + notional);
+    });
+
+    const sortedPortfolios = Array.from(portfolioNotionals.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    const labels = sortedPortfolios.map(([portfolio]) => portfolio);
+    const data = sortedPortfolios.map(([, notional]) => notional);
+    const colors = this.generateColors(labels.length);
+
+    const config: ChartConfiguration = {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Notional Value',
+          data: data,
+          backgroundColor: colors.background,
+          borderColor: colors.border,
+          borderWidth: 0,
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
+            borderWidth: 1,
+            padding: 12,
+            titleFont: {
+              family: 'Montserrat, sans-serif'
+            },
+            bodyFont: {
+              family: 'Montserrat, sans-serif'
+            },
+            callbacks: {
+              label: (context) => {
+                const value = context.parsed.x;
+                if (value == null) return 'Notional: $0';
+                return `Notional: ${value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: {
+              color: this.getThemeColors().textSecondary,
+              font: {
+                family: 'Montserrat, sans-serif',
+                size: 10
+              },
+              callback: (value) => {
+                return '$' + (value as number).toLocaleString();
+              }
+            },
+            grid: {
+              color: this.getThemeColors().gridColor
+            }
+          },
+          y: {
+            ticks: {
+              color: this.getThemeColors().textSecondary,
+              font: {
+                family: 'Montserrat, sans-serif',
+                size: 10
+              }
+            },
+            grid: {
+              color: this.getThemeColors().gridColor
+            }
+          }
+        }
+      }
+    };
+
+    this.portfolioChart = new Chart(this.portfolioChartRef.nativeElement, config);
+  }
+
+  createNotionalChart(): void {
+    if (!this.notionalChartRef?.nativeElement) return;
+    
+    if (this.notionalChart) {
+      this.notionalChart.destroy();
+    }
+
+    // Create bins for notional value distribution
+    const notionals = this.executions
+      .map(exec => exec.notional || 0)
+      .filter(n => n > 0);
+
+    if (notionals.length === 0) return;
+
+    const maxNotional = Math.max(...notionals);
+    const minNotional = Math.min(...notionals);
+    const binCount = 10;
+    const binSize = (maxNotional - minNotional) / binCount;
+
+    const bins = new Array(binCount).fill(0);
+    const binLabels: string[] = [];
+
+    notionals.forEach(notional => {
+      const binIndex = Math.min(Math.floor((notional - minNotional) / binSize), binCount - 1);
+      bins[binIndex]++;
+    });
+
+    for (let i = 0; i < binCount; i++) {
+      const binStart = minNotional + (i * binSize);
+      const binEnd = minNotional + ((i + 1) * binSize);
+      binLabels.push(`$${Math.round(binStart).toLocaleString()} - $${Math.round(binEnd).toLocaleString()}`);
+    }
+
+    const colors = this.generateColors(binCount);
+
+    const config: ChartConfiguration = {
+      type: 'bar',
+      data: {
+        labels: binLabels,
+        datasets: [{
+          label: 'Executions',
+          data: bins,
+          backgroundColor: colors.background,
+          borderColor: colors.border,
+          borderWidth: 0,
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: this.getThemeColors().bgSecondary,
+            titleColor: this.getThemeColors().textPrimary,
+            bodyColor: this.getThemeColors().textSecondary,
+            borderColor: this.getThemeColors().borderColor,
+            borderWidth: 1,
+            padding: 12,
+            titleFont: {
+              family: 'Montserrat, sans-serif'
+            },
+            bodyFont: {
+              family: 'Montserrat, sans-serif'
+            }
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: {
+              color: this.getThemeColors().textSecondary,
+              font: {
+                family: 'Montserrat, sans-serif',
+                size: 9
+              },
+              maxRotation: 45,
+              minRotation: 45
+            },
+            grid: {
+              color: this.getThemeColors().gridColor
+            }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: this.getThemeColors().textSecondary,
+              font: {
+                family: 'Montserrat, sans-serif',
+                size: 10
+              }
+            },
+            grid: {
+              color: this.getThemeColors().gridColor
+            }
+          }
+        }
+      }
+    };
+
+    this.notionalChart = new Chart(this.notionalChartRef.nativeElement, config);
+  }
+
+  getThemeColors(): { bgSecondary: string, borderColor: string, textPrimary: string, textSecondary: string, gridColor: string } {
+    if (this.isLightMode) {
+      return {
+        bgSecondary: '#e5e5e5',
+        borderColor: '#cccccc',
+        textPrimary: '#000000',
+        textSecondary: '#333333',
+        gridColor: '#cccccc'
+      };
+    } else {
+      return {
+        bgSecondary: '#0f0f0f',
+        borderColor: '#1a1a1a',
+        textPrimary: '#ffffff',
+        textSecondary: '#cccccc',
+        gridColor: '#1a1a1a'
+      };
+    }
   }
 
   generateColors(count: number): { background: string[], border: string[] } {

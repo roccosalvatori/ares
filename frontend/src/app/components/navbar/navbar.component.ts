@@ -14,7 +14,7 @@ import { filter } from 'rxjs/operators';
   standalone: true,
   imports: [CommonModule, RouterModule, LiveFeedToggleComponent],
   template: `
-    <nav class="navbar">
+    <nav class="navbar" [class.live-feed-active]="isLiveFeedActive">
       <div class="navbar-left">
         <div class="logo-container">
           <img [src]="isLightMode ? 'assets/svgs/logos/logo-ares-simple-dark.svg' : 'assets/svgs/logos/logo-ares-simple.svg'" alt="ARES Logo" class="logo-ares-simple">
@@ -91,6 +91,49 @@ import { filter } from 'rxjs/operators';
       left: 0;
       right: 0;
       z-index: 1000;
+    }
+
+    .navbar::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, 
+        rgba(217, 64, 64, 0) 0%,
+        rgba(217, 64, 64, 0.8) 20%,
+        rgba(217, 64, 64, 1) 50%,
+        rgba(217, 64, 64, 0.8) 80%,
+        rgba(217, 64, 64, 0) 100%);
+      box-shadow: 0 0 10px rgba(217, 64, 64, 0.6),
+                  0 0 20px rgba(217, 64, 64, 0.4),
+                  0 0 30px rgba(217, 64, 64, 0.2);
+      opacity: 0;
+      transform: scaleY(0);
+      transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+      pointer-events: none;
+    }
+
+    .navbar.live-feed-active::after {
+      opacity: 1;
+      transform: scaleY(1);
+      animation: redGlow 2s ease-in-out infinite;
+    }
+
+    @keyframes redGlow {
+      0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 10px rgba(217, 64, 64, 0.6),
+                    0 0 20px rgba(217, 64, 64, 0.4),
+                    0 0 30px rgba(217, 64, 64, 0.2);
+      }
+      50% {
+        opacity: 0.8;
+        box-shadow: 0 0 15px rgba(217, 64, 64, 0.8),
+                    0 0 30px rgba(217, 64, 64, 0.6),
+                    0 0 45px rgba(217, 64, 64, 0.4);
+      }
     }
 
     .navbar-left {
