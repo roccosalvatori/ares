@@ -1,33 +1,28 @@
-package com.ares.controller;
+package com.ares.modules.execution.domain;
 
-import com.ares.dto.ExecutionData;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
-@RestController
-@RequestMapping("/test-execution")
-@CrossOrigin(origins = "http://localhost:4200")
-public class ExecutionController {
-
-    // In-memory cache for executions by count
-    private final ConcurrentMap<Integer, List<ExecutionData>> executionsCache = new ConcurrentHashMap<>();
+/**
+ * Domain service for generating execution data.
+ * Contains business logic for execution generation.
+ */
+@Component
+public class ExecutionGenerator {
+    
     private final Random random = new Random();
     
-    // Diversified field values with non-uniform distribution weights
+    // Field value distributions
     private static final String[] STATUSES = {"ACK", "ANO", "TIMEOUT", "REJECTED", "PENDING"};
-    private static final double[] STATUS_WEIGHTS = {0.40, 0.25, 0.15, 0.10, 0.10}; // ACK most common
+    private static final double[] STATUS_WEIGHTS = {0.40, 0.25, 0.15, 0.10, 0.10};
     
     private static final String[] INSTRUMENTS = {"STOCK", "FUTURE", "OPTION", "BOND", "FOREX"};
-    private static final double[] INSTRUMENT_WEIGHTS = {0.50, 0.20, 0.15, 0.10, 0.05}; // STOCK most common
+    private static final double[] INSTRUMENT_WEIGHTS = {0.50, 0.20, 0.15, 0.10, 0.05};
     
     private static final String[] REGIONS = {"AMERICAS", "EUROPE", "ASIA", "EMEA", "ALL"};
     private static final double[] REGION_WEIGHTS = {0.35, 0.30, 0.20, 0.10, 0.05};
@@ -58,47 +53,24 @@ public class ExecutionController {
     
     private static final String[] ORDER_STATUSES = {"FILLED", "PARTIAL", "PENDING", "CANCELLED", "REJECTED"};
     private static final double[] ORDER_STATUS_WEIGHTS = {0.50, 0.20, 0.15, 0.10, 0.05};
-
-    @GetMapping
-    public ResponseEntity<ExecutionData> getTestExecution() {
-        ExecutionData execution = createSampleExecution();
-        return ResponseEntity.ok(execution);
-    }
-
-    @GetMapping("/list")
-    public ResponseEntity<List<ExecutionData>> getTestExecutions(@RequestParam(defaultValue = "2000") int count) {
-        // Use cache to avoid regenerating executions
-        List<ExecutionData> executions = executionsCache.computeIfAbsent(count, k -> {
-            List<ExecutionData> newExecutions = new ArrayList<>();
-            for (int i = 0; i < k; i++) {
-                newExecutions.add(createSampleExecution(i));
-            }
-            return newExecutions;
-        });
-        
-        // Return a copy to prevent external modifications
-        return ResponseEntity.ok(new ArrayList<>(executions));
+    
+    public List<Execution> generate(int count) {
+        List<Execution> executions = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            executions.add(generateExecution(i));
+        }
+        return executions;
     }
     
-    @DeleteMapping("/cache")
-    public ResponseEntity<String> clearCache() {
-        executionsCache.clear();
-        return ResponseEntity.ok("Cache cleared");
-    }
-
-    private ExecutionData createSampleExecution() {
-        return createSampleExecution(0);
-    }
-
-    private ExecutionData createSampleExecution(int index) {
-        ExecutionData execution = new ExecutionData();
+    public Execution generateExecution(int index) {
+        Execution execution = new Execution();
         
         // String fields with weighted random distribution
         execution.setOrderId("ORD" + String.format("%06d", 100000 + index));
         execution.setIsin("US" + String.format("%010d", 37833100 + (index % 15)));
         execution.setBloombergLongTicker(getBloombergTicker(index));
-        execution.setTrader("TRADER" + (index % 8 + 1)); // 8 traders, non-uniform
-        execution.setBook("BOOK" + (index % 6 + 1)); // 6 books
+        execution.setTrader("TRADER" + (index % 8 + 1));
+        execution.setBook("BOOK" + (index % 6 + 1));
         execution.setStatus(selectWeighted(STATUSES, STATUS_WEIGHTS));
         execution.setInstrument(selectWeighted(INSTRUMENTS, INSTRUMENT_WEIGHTS));
         execution.setRegion(selectWeighted(REGIONS, REGION_WEIGHTS));
@@ -120,19 +92,19 @@ public class ExecutionController {
         execution.setSector(selectWeighted(SECTORS, SECTOR_WEIGHTS));
         execution.setAssetClass(selectWeighted(ASSET_CLASSES, ASSET_CLASS_WEIGHTS));
         
-        // Numeric fields with random variation
+        // Numeric fields
         execution.setExecutionId(1000000L + index);
-        execution.setQuantity(50 + random.nextInt(950)); // Random 50-1000
-        execution.setPrice(BigDecimal.valueOf(10.0 + random.nextDouble() * 500.0)); // Random 10-510
+        execution.setQuantity(50 + random.nextInt(950));
+        execution.setPrice(BigDecimal.valueOf(10.0 + random.nextDouble() * 500.0));
         execution.setNotional(execution.getPrice().multiply(BigDecimal.valueOf(execution.getQuantity())));
         execution.setFillQuantity(execution.getQuantity());
         execution.setAveragePrice(execution.getPrice());
-        execution.setCommission(0.5 + random.nextDouble() * 15.0); // Random 0.5-15.5
+        execution.setCommission(0.5 + random.nextDouble() * 15.0);
         
         // Boolean field
-        execution.setIsActive(random.nextDouble() < 0.7); // 70% active
+        execution.setIsActive(random.nextDouble() < 0.7);
         
-        // DateTime field - all on same day, non-uniform distribution with peak at 17:00
+        // DateTime field
         execution.setExecutionTime(generateExecutionTime(index));
         
         return execution;
@@ -156,42 +128,29 @@ public class ExecutionController {
         return tickers[index % tickers.length];
     }
     
-    /**
-     * Generate execution time distributed throughout a single day with peak at 17:00
-     * Non-uniform distribution: peak at 17:00, high activity 14:00-18:00, low activity overnight
-     */
     private LocalDateTime generateExecutionTime(int index) {
-        // Base date - all executions on the same day (2024-12-18)
         LocalDateTime baseDate = LocalDateTime.of(2024, 12, 18, 0, 0, 0);
         
-        // Generate hour with weighted distribution (peak at 17:00)
         int hour;
         double rand = random.nextDouble();
         
         if (rand < 0.30) {
-            // Peak hour (17:00) - 30% of executions
             hour = 17;
         } else if (rand < 0.50) {
-            // High activity hours (16:00, 18:00) - 20% of executions
             hour = random.nextDouble() < 0.5 ? 16 : 18;
         } else if (rand < 0.70) {
-            // Medium-high activity (15:00, 19:00) - 20% of executions
             hour = random.nextDouble() < 0.5 ? 15 : 19;
         } else if (rand < 0.85) {
-            // Medium activity (13:00, 14:00, 20:00, 21:00) - 15% of executions
             int[] hours = {13, 14, 20, 21};
             hour = hours[random.nextInt(hours.length)];
         } else if (rand < 0.95) {
-            // Regular hours (9:00-12:00, 22:00) - 10% of executions
             int[] hours = {9, 10, 11, 12, 22};
             hour = hours[random.nextInt(hours.length)];
         } else {
-            // Low activity hours (0:00-8:00, 23:00) - 5% of executions
             int[] hours = {0, 1, 2, 3, 4, 5, 6, 7, 8, 23};
             hour = hours[random.nextInt(hours.length)];
         }
         
-        // Generate random minutes and seconds
         int minute = random.nextInt(60);
         int second = random.nextInt(60);
         

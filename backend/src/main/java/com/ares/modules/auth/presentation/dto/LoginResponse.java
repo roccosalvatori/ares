@@ -1,5 +1,8 @@
-package com.ares.dto;
+package com.ares.modules.auth.presentation.dto;
 
+/**
+ * DTO for login response.
+ */
 public class LoginResponse {
     private String token;
     private String message;

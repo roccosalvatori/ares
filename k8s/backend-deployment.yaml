@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ares-backend
+  namespace: ares
+  labels:
+    app: ares-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ares-backend
+  template:
+    metadata:
+      labels:
+        app: ares-backend
+    spec:
+      containers:
+      - name: backend
+        image: ares-backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: REDIS_HOST
+          value: redis
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ares-secrets
+              key: redis-password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ares-secrets
+              key: jwt-secret
+        - name: LDAP_URLS
+          valueFrom:
+            configMapKeyRef:
+              name: ares-config
+              key: ldap-urls
+        - name: LDAP_BASE
+          valueFrom:
+            configMapKeyRef:
+              name: ares-config
+              key: ldap-base
+        - name: LDAP_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: ares-secrets
+              key: ldap-username
+        - name: LDAP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ares-secrets
+              key: ldap-password
+        - name: AD_DOMAIN
+          valueFrom:
+            configMapKeyRef:
+              name: ares-config
+              key: ad-domain
+        - name: AD_URL
+          valueFrom:
+            configMapKeyRef:
+              name: ares-config
+              key: ad-url
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ares-backend
+  namespace: ares
+  labels:
+    app: ares-backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: ares-backend
+

@@ -1,7 +1,10 @@
-package com.ares.dto;
+package com.ares.modules.auth.presentation.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
+/**
+ * DTO for login request.
+ */
 public class LoginRequest {
     @NotBlank(message = "Username is required")
     private String username;

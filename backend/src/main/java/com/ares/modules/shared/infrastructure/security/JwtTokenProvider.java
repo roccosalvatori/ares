@@ -1,4 +1,4 @@
-package com.ares.security;
+package com.ares.modules.shared.infrastructure.security;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -6,10 +6,13 @@ import org.springframework.stereotype.Component;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.Date;
 
+/**
+ * JWT Token Provider - Shared security component.
+ * Used by auth module and security filters.
+ */
 @Component
 public class JwtTokenProvider {
 
@@ -21,7 +24,6 @@ public class JwtTokenProvider {
 
     private SecretKeySpec getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
-        // Ensure key is at least 256 bits (32 bytes) for HS256
         if (keyBytes.length < 32) {
             byte[] paddedKey = new byte[32];
             System.arraycopy(keyBytes, 0, paddedKey, 0, keyBytes.length);
@@ -54,7 +56,6 @@ public class JwtTokenProvider {
                 return null;
             }
             String payload = new String(base64UrlDecode(parts[1]), StandardCharsets.UTF_8);
-            // Simple JSON parsing to extract "sub" field
             int subIndex = payload.indexOf("\"sub\":\"");
             if (subIndex == -1) {
                 return null;
@@ -77,7 +78,6 @@ public class JwtTokenProvider {
                 return null;
             }
             String payload = new String(base64UrlDecode(parts[1]), StandardCharsets.UTF_8);
-            // Simple JSON parsing to extract "exp" field
             int expIndex = payload.indexOf("\"exp\":");
             if (expIndex == -1) {
                 return null;
@@ -104,14 +104,12 @@ public class JwtTokenProvider {
                 return false;
             }
 
-            // Verify signature
             String data = parts[0] + "." + parts[1];
             String signature = createSignature(data);
             if (!signature.equals(parts[2])) {
                 return false;
             }
 
-            // Check expiration
             Date expiration = getExpirationDateFromToken(token);
             if (expiration == null || expiration.before(new Date())) {
                 return false;

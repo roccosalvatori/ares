@@ -13,16 +13,6 @@ BOLD='\033[1m'
 
 # Get the directory where the script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-BACKEND_DIR="$SCRIPT_DIR/backend"
-FRONTEND_DIR="$SCRIPT_DIR/frontend"
-
-# Log files
-BACKEND_LOG="/tmp/ares-backend.log"
-FRONTEND_LOG="/tmp/ares-frontend.log"
-
-# PID files
-BACKEND_PID_FILE="/tmp/ares-backend.pid"
-FRONTEND_PID_FILE="/tmp/ares-frontend.pid"
 
 # Function to print ASCII art
 print_ascii_art() {
@@ -48,47 +38,10 @@ EOF
 
 # Function to cleanup on exit
 cleanup() {
-    echo -e "\n${YELLOW}${BOLD}[ARES]${NC} Shutting down services..."
-    
-    # Kill backend if running
-    if [ -f "$BACKEND_PID_FILE" ]; then
-        BACKEND_PID=$(cat "$BACKEND_PID_FILE")
-        if ps -p "$BACKEND_PID" > /dev/null 2>&1; then
-            echo -e "${YELLOW}[BACKEND]${NC} Stopping Spring Boot server (PID: $BACKEND_PID)..."
-            kill "$BACKEND_PID" 2>/dev/null
-            wait "$BACKEND_PID" 2>/dev/null
-        fi
-        rm -f "$BACKEND_PID_FILE"
-    fi
-    
-    # Kill frontend if running
-    if [ -f "$FRONTEND_PID_FILE" ]; then
-        FRONTEND_PID=$(cat "$FRONTEND_PID_FILE")
-        if ps -p "$FRONTEND_PID" > /dev/null 2>&1; then
-            echo -e "${YELLOW}[FRONTEND]${NC} Stopping Angular dev server (PID: $FRONTEND_PID)..."
-            kill "$FRONTEND_PID" 2>/dev/null
-            wait "$FRONTEND_PID" 2>/dev/null
-        fi
-        rm -f "$FRONTEND_PID_FILE"
-    fi
-    
-    # Kill tail processes
-    if [ -f "/tmp/ares-tail-backend.pid" ]; then
-        TAIL_PID=$(cat "/tmp/ares-tail-backend.pid")
-        kill "$TAIL_PID" 2>/dev/null
-        rm -f "/tmp/ares-tail-backend.pid"
-    fi
-    if [ -f "/tmp/ares-tail-frontend.pid" ]; then
-        TAIL_PID=$(cat "/tmp/ares-tail-frontend.pid")
-        kill "$TAIL_PID" 2>/dev/null
-        rm -f "/tmp/ares-tail-frontend.pid"
-    fi
-    
-    # Kill any remaining node/maven processes
-    pkill -f "ng serve" 2>/dev/null
-    pkill -f "spring-boot:run" 2>/dev/null
-    
-    echo -e "${GREEN}${BOLD}[ARES]${NC} All services stopped. Goodbye!"
+    echo -e "\n${YELLOW}${BOLD}[ARES]${NC} Shutting down containers..."
+    cd "$SCRIPT_DIR" || exit 1
+    docker compose down
+    echo -e "${GREEN}${BOLD}[ARES]${NC} All containers stopped. Goodbye!"
     exit 0
 }
 
@@ -100,93 +53,102 @@ clear
 print_ascii_art
 
 echo -e "${WHITE}${BOLD}═══════════════════════════════════════════════════════════════${NC}"
-echo -e "${CYAN}${BOLD}Starting ARES Application${NC}"
+echo -e "${CYAN}${BOLD}Starting ARES Application (Docker Compose)${NC}"
 echo -e "${WHITE}${BOLD}═══════════════════════════════════════════════════════════════${NC}\n"
 
-# Check if directories exist
-if [ ! -d "$BACKEND_DIR" ]; then
-    echo -e "${RED}${BOLD}[ERROR]${NC} Backend directory not found: $BACKEND_DIR"
+# Check if Docker is installed
+if ! command -v docker &> /dev/null; then
+    echo -e "${RED}${BOLD}[ERROR]${NC} Docker is not installed or not in PATH."
+    echo -e "${YELLOW}[INFO]${NC} Please install Docker: https://www.docker.com/get-started"
     exit 1
 fi
 
-if [ ! -d "$FRONTEND_DIR" ]; then
-    echo -e "${RED}${BOLD}[ERROR]${NC} Frontend directory not found: $FRONTEND_DIR"
+# Check if Docker Compose is available
+if ! docker compose version &> /dev/null; then
+    echo -e "${RED}${BOLD}[ERROR]${NC} Docker Compose is not available."
+    echo -e "${YELLOW}[INFO]${NC} Please install Docker Compose (v2.0+): https://docs.docker.com/compose/install/"
     exit 1
 fi
 
-# Clean up old log files
-rm -f "$BACKEND_LOG" "$FRONTEND_LOG"
-
-# Start Backend
-echo -e "${BLUE}${BOLD}[BACKEND]${NC} Starting Spring Boot server..."
-echo -e "${BLUE}[BACKEND]${NC} Directory: $BACKEND_DIR"
-echo -e "${BLUE}[BACKEND]${NC} Log file: $BACKEND_LOG"
-echo ""
-
-cd "$BACKEND_DIR" || exit 1
-
-# Start Maven in background with detailed logging
-mvn spring-boot:run > "$BACKEND_LOG" 2>&1 &
-BACKEND_PID=$!
-echo "$BACKEND_PID" > "$BACKEND_PID_FILE"
-
-echo -e "${GREEN}[BACKEND]${NC} Started with PID: $BACKEND_PID"
-echo -e "${GREEN}[BACKEND]${NC} Backend will be available at: ${CYAN}http://localhost:8080${NC}\n"
-
-# Start Frontend
-echo -e "${MAGENTA}${BOLD}[FRONTEND]${NC} Starting Angular development server..."
-echo -e "${MAGENTA}[FRONTEND]${NC} Directory: $FRONTEND_DIR"
-echo -e "${MAGENTA}[FRONTEND]${NC} Log file: $FRONTEND_LOG"
-echo ""
-
-cd "$FRONTEND_DIR" || exit 1
-
-# Check if node_modules exists
-if [ ! -d "node_modules" ]; then
-    echo -e "${YELLOW}[FRONTEND]${NC} node_modules not found. Installing dependencies..."
-    npm install
+# Check if docker-compose.yml exists
+if [ ! -f "$SCRIPT_DIR/docker-compose.yml" ]; then
+    echo -e "${RED}${BOLD}[ERROR]${NC} docker-compose.yml not found in: $SCRIPT_DIR"
+    exit 1
 fi
 
-# Start Angular in background with detailed logging
-npm start > "$FRONTEND_LOG" 2>&1 &
-FRONTEND_PID=$!
-echo "$FRONTEND_PID" > "$FRONTEND_PID_FILE"
+# Check if Docker daemon is running
+if ! docker info &> /dev/null; then
+    echo -e "${RED}${BOLD}[ERROR]${NC} Docker daemon is not running."
+    echo -e "${YELLOW}[INFO]${NC} Please start Docker Desktop or Docker daemon."
+    exit 1
+fi
 
-echo -e "${GREEN}[FRONTEND]${NC} Started with PID: $FRONTEND_PID"
-echo -e "${GREEN}[FRONTEND]${NC} Frontend will be available at: ${CYAN}http://localhost:4200${NC}\n"
+# Change to script directory
+cd "$SCRIPT_DIR" || exit 1
 
-# Wait a moment for processes to start
-sleep 2
+# Check if containers are already running
+if docker compose ps | grep -q "Up"; then
+    echo -e "${YELLOW}[WARNING]${NC} Some containers are already running."
+    echo -e "${YELLOW}[INFO]${NC} Stopping existing containers..."
+    docker compose down
+fi
+
+# Check for .env file
+if [ ! -f "$SCRIPT_DIR/.env" ]; then
+    echo -e "${YELLOW}[INFO]${NC} No .env file found. Using default values from docker-compose.yml"
+    echo -e "${CYAN}[INFO]${NC} To customize configuration, create a .env file in the project root."
+fi
+
+# Build and start all services
+echo -e "${BLUE}${BOLD}[DOCKER]${NC} Building and starting containers..."
+echo -e "${BLUE}[DOCKER]${NC} This may take a few minutes on first run..."
+echo ""
+
+# Build and start in detached mode first
+docker compose up -d --build
+
+# Check if containers started successfully
+if [ $? -ne 0 ]; then
+    echo -e "${RED}${BOLD}[ERROR]${NC} Failed to start containers. Check the logs above for details."
+    exit 1
+fi
+
+# Wait a moment for containers to initialize
+echo -e "${GREEN}[DOCKER]${NC} Containers started. Waiting for services to be ready..."
+sleep 5
+
+# Check container status
+echo -e "\n${CYAN}${BOLD}Container Status:${NC}"
+docker compose ps
+
+# Display service URLs
+echo -e "\n${WHITE}${BOLD}═══════════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}${BOLD}Services are starting up!${NC}"
+echo -e "${WHITE}${BOLD}═══════════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}[FRONTEND]${NC} Will be available at: ${CYAN}http://localhost${NC}"
+echo -e "${GREEN}[BACKEND]${NC}  Will be available at: ${CYAN}http://localhost:8080/api${NC}"
+echo -e "${GREEN}[HEALTH]${NC}   Health check at:      ${CYAN}http://localhost:8080/api/health${NC}"
+echo -e "${WHITE}${BOLD}═══════════════════════════════════════════════════════════════${NC}\n"
 
 # Display logs with colors
 echo -e "${WHITE}${BOLD}═══════════════════════════════════════════════════════════════${NC}"
 echo -e "${CYAN}${BOLD}Live Logs (Press Ctrl+C to stop all services)${NC}"
 echo -e "${WHITE}${BOLD}═══════════════════════════════════════════════════════════════${NC}\n"
 
-# Function to tail logs with colors using named pipes for better merging
-tail_backend() {
-    tail -f "$BACKEND_LOG" 2>/dev/null | while IFS= read -r line; do
-        echo -e "${BLUE}[BACKEND]${NC} $line"
+# Function to tail logs with colors
+tail_logs() {
+    docker compose logs -f 2>/dev/null | while IFS= read -r line; do
+        if [[ $line == *"ares-backend"* ]] || [[ $line == *"backend"* ]]; then
+            echo -e "${BLUE}[BACKEND]${NC} $line"
+        elif [[ $line == *"ares-frontend"* ]] || [[ $line == *"frontend"* ]]; then
+            echo -e "${MAGENTA}[FRONTEND]${NC} $line"
+        elif [[ $line == *"ares-redis"* ]] || [[ $line == *"redis"* ]]; then
+            echo -e "${YELLOW}[REDIS]${NC} $line"
+        else
+            echo -e "${WHITE}[DOCKER]${NC} $line"
+        fi
     done
 }
 
-tail_frontend() {
-    tail -f "$FRONTEND_LOG" 2>/dev/null | while IFS= read -r line; do
-        echo -e "${MAGENTA}[FRONTEND]${NC} $line"
-    done
-}
-
-# Start tailing both logs in background
-tail_backend &
-TAIL_BACKEND_PID=$!
-
-tail_frontend &
-TAIL_FRONTEND_PID=$!
-
-# Store tail PIDs for cleanup
-echo "$TAIL_BACKEND_PID" > /tmp/ares-tail-backend.pid
-echo "$TAIL_FRONTEND_PID" > /tmp/ares-tail-frontend.pid
-
-# Wait for user interrupt (Ctrl+C)
-wait
-
+# Start tailing logs
+tail_logs

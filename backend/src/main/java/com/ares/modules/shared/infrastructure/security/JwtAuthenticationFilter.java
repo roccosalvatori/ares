@@ -1,4 +1,4 @@
-package com.ares.security;
+package com.ares.modules.shared.infrastructure.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,6 +14,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * JWT Authentication Filter - Shared security component.
+ * Used across all modules for authentication.
+ */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 

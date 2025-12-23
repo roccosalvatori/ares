@@ -1,8 +1,7 @@
-package com.ares.security;
+package com.ares.modules.shared.infrastructure.security;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.ldap.core.LdapTemplate;
-import org.springframework.ldap.core.support.LdapContextSource;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
@@ -22,6 +21,10 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
+/**
+ * LDAP User Details Service - Shared security component.
+ * Used by auth module for user details and role loading.
+ */
 @Service
 public class LdapUserDetailsService implements UserDetailsService {
 
@@ -53,7 +56,6 @@ public class LdapUserDetailsService implements UserDetailsService {
 
     public UserDetails loadUserByUsername(String username, String ldapUrl) throws UsernameNotFoundException {
         try {
-            // Test credentials bypass for admin/admin
             if ("admin".equals(username)) {
                 List<GrantedAuthority> adminAuthorities = new ArrayList<>();
                 adminAuthorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
@@ -72,13 +74,11 @@ public class LdapUserDetailsService implements UserDetailsService {
 
             List<GrantedAuthority> authorities = new ArrayList<>();
             
-            // Try to get groups from LDAP if URL is provided
             if (ldapUrl != null && !ldapUrl.isEmpty()) {
                 authorities = getUserAuthoritiesFromLdap(username, ldapUrl);
             } else {
-                // Try with default LDAP template
                 try {
-            String userDn = findUserDn(username);
+                    String userDn = findUserDn(username);
                     if (userDn != null) {
                         authorities = getUserAuthorities(userDn);
                     }
@@ -87,14 +87,13 @@ public class LdapUserDetailsService implements UserDetailsService {
                 }
             }
 
-            // Always add a default user role if no groups found
             if (authorities.isEmpty()) {
                 authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
             }
 
             return User.builder()
                     .username(username)
-                    .password("") // Password is not stored, authentication happens via LDAP
+                    .password("")
                     .authorities(authorities)
                     .accountExpired(false)
                     .accountLocked(false)
@@ -102,7 +101,6 @@ public class LdapUserDetailsService implements UserDetailsService {
                     .disabled(false)
                     .build();
         } catch (Exception e) {
-            // Even if group lookup fails, create user with default role
             List<GrantedAuthority> defaultAuthorities = new ArrayList<>();
             defaultAuthorities.add(new SimpleGrantedAuthority("ROLE_USER"));
             
@@ -123,23 +121,20 @@ public class LdapUserDetailsService implements UserDetailsService {
         DirContext context = null;
         
         try {
-            // Create LDAP context for querying groups
             Hashtable<String, String> env = new Hashtable<>();
             env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
             env.put(Context.PROVIDER_URL, ldapUrl);
             env.put(Context.SECURITY_AUTHENTICATION, "simple");
-            env.put(Context.SECURITY_PRINCIPAL, ""); // Anonymous bind for group search
+            env.put(Context.SECURITY_PRINCIPAL, "");
             env.put(Context.SECURITY_CREDENTIALS, "");
             
             context = new javax.naming.ldap.InitialLdapContext(env, null);
             
-            // Search for user DN first
             String userDn = findUserDnInContext(context, username);
             if (userDn == null) {
                 return authorities;
             }
             
-            // Search for groups
             SearchControls searchControls = new SearchControls();
             searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
             searchControls.setReturningAttributes(new String[]{groupRoleAttribute});
@@ -147,7 +142,7 @@ public class LdapUserDetailsService implements UserDetailsService {
             String filter = groupSearchFilter.replace("{0}", userDn);
             String searchBase = groupSearchBase != null && !groupSearchBase.isEmpty() 
                 ? groupSearchBase 
-                : ""; // Search from root if base not specified
+                : "";
             
             NamingEnumeration<SearchResult> results = context.search(searchBase, filter, searchControls);
             
@@ -157,7 +152,6 @@ public class LdapUserDetailsService implements UserDetailsService {
                 if (attrs != null && attrs.get(groupRoleAttribute) != null) {
                     String groupName = attrs.get(groupRoleAttribute).get().toString();
                     if (groupName != null && !groupName.isEmpty()) {
-                        // Extract group name (handle cases like "cn=GroupName,ou=groups")
                         String cleanGroupName = groupName;
                         if (groupName.contains("=")) {
                             cleanGroupName = groupName.split(",")[0].split("=")[1];
@@ -168,7 +162,7 @@ public class LdapUserDetailsService implements UserDetailsService {
             }
             
         } catch (Exception e) {
-            // If group lookup fails, return empty list (will get default USER role)
+            // If group lookup fails, return empty list
         } finally {
             if (context != null) {
                 try {
@@ -191,7 +185,7 @@ public class LdapUserDetailsService implements UserDetailsService {
             String filter = userSearchFilter.replace("{0}", username);
             String searchBase = userSearchBase != null && !userSearchBase.isEmpty() 
                 ? userSearchBase 
-                : ""; // Search from root if base not specified
+                : "";
             
             NamingEnumeration<SearchResult> results = context.search(searchBase, filter, searchControls);
             
@@ -255,7 +249,6 @@ public class LdapUserDetailsService implements UserDetailsService {
 
             for (String group : groups) {
                 if (group != null) {
-                    // Extract group name (handle cases like "cn=GroupName,ou=groups")
                     String cleanGroupName = group;
                     if (group.contains("=")) {
                         cleanGroupName = group.split(",")[0].split("=")[1];

@@ -1,0 +1,72 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: ares-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-change-me-redis-password}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ares-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ares-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-change-me-redis-password}
+      - JWT_SECRET=${JWT_SECRET:-change-me-jwt-secret-key-minimum-256-bits-required-for-production}
+      - LDAP_URLS=${LDAP_URLS:-ldap://localhost:389}
+      - LDAP_BASE=${LDAP_BASE:-dc=example,dc=com}
+      - LDAP_USERNAME=${LDAP_USERNAME:-}
+      - LDAP_PASSWORD=${LDAP_PASSWORD:-}
+      - AD_DOMAIN=${AD_DOMAIN:-example.com}
+      - AD_URL=${AD_URL:-ldap://ad.example.com:389}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ares-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ares-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - ares-network
+
+volumes:
+  redis-data:
+
+networks:
+  ares-network:
+    driver: bridge
+
