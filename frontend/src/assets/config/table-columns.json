@@ -13,10 +13,6 @@
       "header": "Side"
     },
     {
-      "field": "bloombergLongTicker",
-      "header": "Bloomberg Ticker"
-    },
-    {
       "field": "trader",
       "header": "Trader"
     },
@@ -61,8 +57,17 @@
       "type": "datetime"
     },
     {
-      "field": "exchange",
-      "header": "Exchange"
+      "field": "instrumentType",
+      "header": "Instrument Type"
+    },
+    {
+      "field": "mic",
+      "header": "MIC"
+    },
+    {
+      "field": "country",
+      "header": "Country",
+      "type": "flag"
     }
   ]
 }

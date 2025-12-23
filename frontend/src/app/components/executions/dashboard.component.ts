@@ -201,6 +201,9 @@ import { map } from 'rxjs/operators';
           <button class="search-btn" (click)="onSearch()">
             <span>SEARCH</span>
           </button>
+          <button class="search-btn search-api-btn" (click)="onSearchRealApi()">
+            <span>SEARCH API</span>
+          </button>
         </div>
       </div>
       <div class="dashboard-message">
@@ -398,7 +401,19 @@ import { map } from 'rxjs/operators';
                         [class.fund]="getFieldValue(execution, column.field) === 'FUND'">
                     {{ getFieldValue(execution, column.field) }}
                   </span>
-                  <span *ngIf="!column.type && column.field !== 'side' && column.field !== 'instrument'">{{ getFieldValue(execution, column.field) }}</span>
+                  <span *ngIf="column.field === 'instrumentType'" class="instrument-tag" 
+                        [class.stock]="getFieldValue(execution, column.field) === 'stock' || getFieldValue(execution, column.field) === 'STOCK'"
+                        [class.future]="getFieldValue(execution, column.field) === 'future' || getFieldValue(execution, column.field) === 'FUTURE'"
+                        [class.option]="getFieldValue(execution, column.field) === 'option' || getFieldValue(execution, column.field) === 'OPTION'"
+                        [class.strategy]="getFieldValue(execution, column.field) === 'strategy' || getFieldValue(execution, column.field) === 'STRATEGY'"
+                        [class.bond]="getFieldValue(execution, column.field) === 'bond' || getFieldValue(execution, column.field) === 'BOND'"
+                        [class.fund]="getFieldValue(execution, column.field) === 'fund' || getFieldValue(execution, column.field) === 'FUND'">
+                    {{ getFieldValue(execution, column.field) }}
+                  </span>
+                  <span *ngIf="column.field === 'region'" class="region-tag">
+                    {{ getFieldValue(execution, column.field) }}
+                  </span>
+                  <span *ngIf="!column.type && column.field !== 'side' && column.field !== 'instrument' && column.field !== 'instrumentType' && column.field !== 'region'">{{ getFieldValue(execution, column.field) }}</span>
                 </td>
                   <td *ngIf="isDraggingFromHidden" class="placeholder-cell"></td>
               </tr>
@@ -874,6 +889,19 @@ import { map } from 'rxjs/operators';
       font-family: 'Montserrat', sans-serif;
       cursor: pointer;
       text-transform: uppercase;
+      margin-right: 12px;
+    }
+
+    .search-api-btn {
+      background: #dc2626;
+      color: white;
+      border: 2px solid #dc2626;
+    }
+
+    .search-api-btn:hover {
+      background: #b91c1c;
+      border-color: #b91c1c;
+    }
       letter-spacing: 1px;
     }
     
@@ -1434,6 +1462,21 @@ import { map } from 'rxjs/operators';
       background-color: #a855f7;
     }
 
+    .region-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: 'Montserrat', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #ffffff;
+      background-color: #ffffff;
+      color: #1f2937;
+      border: 1px solid #e5e7eb;
+    }
+
     /* Column Manager Styles */
     .column-manager {
       margin-bottom: 16px;
@@ -1772,7 +1815,7 @@ export class ExecutionsComponent implements OnInit, OnDestroy, AfterViewInit {
   selectedInstruments: string[] = [];
 
 
-  executionCountryCodes: Map<number, string> = new Map();
+  executionCountryCodes: Map<number | string, string> = new Map();
 
   // Virtual scrolling state
   @ViewChild('tableWrapper', { static: false }) tableWrapperRef!: ElementRef<HTMLElement>;
@@ -1925,7 +1968,7 @@ export class ExecutionsComponent implements OnInit, OnDestroy, AfterViewInit {
   }
   
   trackByExecutionId(index: number, execution: ExecutionData): number {
-    return execution.executionId;
+    return execution.executionId ?? index;
   }
   
 
@@ -2166,10 +2209,10 @@ export class ExecutionsComponent implements OnInit, OnDestroy, AfterViewInit {
   onSearch(): void {
     this.isLoading = true;
     this.hasSearched = false;
-    console.log('Search clicked');
+    console.log('Search clicked - fetching from API endpoint');
     
-    // Fetch execution data
-    this.executionService.getExecutions(2000).subscribe({
+    // Fetch execution data from API endpoint
+    this.executionService.fetchApiExecutions().subscribe({
       next: (data) => {
         this.executions = data;
         this.filteredExecutions = data;
@@ -2207,6 +2250,50 @@ export class ExecutionsComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
+  onSearchRealApi(): void {
+    this.isLoading = true;
+    this.hasSearched = false;
+    console.log('Search API clicked - fetching from real API endpoint');
+    
+    // Fetch execution data from real API endpoint
+    this.executionService.fetchRealApiExecutions().subscribe({
+      next: (data) => {
+        this.executions = data;
+        this.filteredExecutions = data;
+        this.loadCountryCodes(data);
+        this.initializeFilters();
+        this.hasSearched = true;
+        this.isLoading = false;
+        // Initialize displayed executions immediately - show first batch
+        this.visibleStartIndex = 0;
+        this.visibleEndIndex = Math.min(this.filteredExecutions.length, 50);
+        this.displayedExecutions = [...this.filteredExecutions.slice(0, this.visibleEndIndex)];
+        
+        // Set up element reference and ensure scroll handler works
+        setTimeout(() => {
+          if (this.tableWrapperRef?.nativeElement) {
+            this.tableWrapperElement = this.tableWrapperRef.nativeElement;
+          } else {
+            const wrapper = document.querySelector('.table-wrapper') as HTMLElement;
+            if (wrapper) {
+              this.tableWrapperElement = wrapper;
+            }
+          }
+          // Force change detection after setup
+          this.cdr.detectChanges();
+        }, 0);
+      },
+      error: (error) => {
+        console.error('Error fetching real API executions:', error);
+        this.executions = [];
+        this.filteredExecutions = [];
+        this.displayedExecutions = [];
+        this.hasSearched = true;
+        this.isLoading = false;
+      }
+    });
+  }
+
   initializeFilters(): void {
     this.columnFilters = [];
     this.filterSearchText = [];
@@ -2218,24 +2305,48 @@ export class ExecutionsComponent implements OnInit, OnDestroy, AfterViewInit {
 
   loadCountryCodes(executions: ExecutionData[]): void {
     this.executionCountryCodes.clear();
-    const countryCodeRequests = executions.map(execution => 
-      this.micCountryService.getCountryCode(execution.mic).pipe(
-        map(countryCode => ({ executionId: execution.executionId, countryCode }))
-      )
-    );
-
-    forkJoin(countryCodeRequests).subscribe(results => {
-      results.forEach(({ executionId, countryCode }) => {
-        if (countryCode) {
-          this.executionCountryCodes.set(executionId, countryCode);
-        }
+    if (!executions || executions.length === 0) {
+      return;
+    }
+    
+    const countryCodeRequests = executions
+      .filter(execution => execution && execution.mic) // Filter out null/undefined executions and mic
+      .map((execution, index) => {
+        // Use orderId as key (always set), fallback to index if orderId is somehow missing
+        const key = execution.orderId || `exec_${index}`;
+        return this.micCountryService.getCountryCode(execution.mic).pipe(
+          map(countryCode => ({ 
+            key: key,
+            countryCode 
+          }))
+        );
       });
+
+    if (countryCodeRequests.length === 0) {
+      return;
+    }
+
+    forkJoin(countryCodeRequests).subscribe({
+      next: (results) => {
+        results.forEach(({ key, countryCode }) => {
+          if (countryCode && key != null) {
+            this.executionCountryCodes.set(key, countryCode);
+          }
+        });
+      },
+      error: (error) => {
+        console.error('Error loading country codes:', error);
+      }
     });
   }
 
   getCountryCode(execution: ExecutionData, field: string): string | null {
     if (field === 'country') {
-      return this.executionCountryCodes.get(execution.executionId) || null;
+      if (!execution || !execution.orderId) {
+        return null;
+      }
+      // Use orderId as key (same as in loadCountryCodes)
+      return this.executionCountryCodes.get(execution.orderId) || null;
     }
     return null;
   }

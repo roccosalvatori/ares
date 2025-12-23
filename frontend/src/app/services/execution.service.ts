@@ -38,6 +38,7 @@ export interface ExecutionData {
   portfolio: string;
   sector: string;
   assetClass: string;
+  instrumentType: string;
 }
 
 export interface TableColumn {
@@ -99,6 +100,47 @@ export class ExecutionService {
       }
     });
     
+    return request$;
+  }
+
+  /**
+   * Fetches executions from the API endpoint.
+   * This triggers the backend to fetch from external API, cache the results, and return them.
+   */
+  fetchApiExecutions(): Observable<ExecutionData[]> {
+    return this.http.post<ExecutionData[]>(`${this.apiUrl}/test-execution/test-api-executions`, {}).pipe(
+      map(data => {
+        // Clear old cache and cache the new API results
+        this.executionsCache.clear();
+        this.cacheObservables.clear();
+        // Cache with a special key to distinguish from generated executions
+        this.executionsCache.set(-1, [...data]);
+        return data;
+      })
+    );
+  }
+
+  /**
+   * Fetches executions from the real API endpoint.
+   * This triggers the backend to fetch from real external API, cache the results, and return them.
+   */
+  fetchRealApiExecutions(): Observable<ExecutionData[]> {
+    this.clearCache(); // Clear cache before fetching new API data
+    const request$ = this.http.post<ExecutionData[]>(`${this.apiUrl}/test-execution/test-real`, {}).pipe(
+      map(data => {
+        this.executionsCache.set(-2, [...data]); // Cache real API results with a special key
+        return data;
+      }),
+      shareReplay(1)
+    );
+    this.cacheObservables.set(-2, request$);
+    request$.subscribe({
+      complete: () => {
+        setTimeout(() => {
+          this.cacheObservables.delete(-2);
+        }, 5 * 60 * 1000);
+      }
+    });
     return request$;
   }
   

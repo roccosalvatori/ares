@@ -93,11 +93,17 @@ if docker compose ps | grep -q "Up"; then
     docker compose down
 fi
 
-# Check for .env file
-if [ ! -f "$SCRIPT_DIR/.env" ]; then
+# Check for .env file and load environment variables
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    echo -e "${CYAN}[INFO]${NC} Loading environment variables from .env file..."
+    export $(cat "$SCRIPT_DIR/.env" | grep -v '^#' | xargs)
+else
     echo -e "${YELLOW}[INFO]${NC} No .env file found. Using default values from docker-compose.yml"
     echo -e "${CYAN}[INFO]${NC} To customize configuration, create a .env file in the project root."
 fi
+
+# Set default Redis password if not set
+REDIS_PASSWORD="${REDIS_PASSWORD:-change-me-redis-password}"
 
 # Build and start all services
 echo -e "${BLUE}${BOLD}[DOCKER]${NC} Building and starting containers..."
@@ -116,6 +122,17 @@ fi
 # Wait a moment for containers to initialize
 echo -e "${GREEN}[DOCKER]${NC} Containers started. Waiting for services to be ready..."
 sleep 5
+
+# Clear Redis cache
+echo -e "${YELLOW}[REDIS]${NC} Clearing Redis cache..."
+# Wait a bit more for Redis to be fully ready
+sleep 2
+if docker exec ares-redis redis-cli -a "$REDIS_PASSWORD" FLUSHALL &> /dev/null; then
+    echo -e "${GREEN}[REDIS]${NC} Redis cache cleared successfully"
+else
+    echo -e "${YELLOW}[REDIS]${NC} Warning: Could not clear Redis cache (Redis may still be starting up)"
+    echo -e "${YELLOW}[REDIS]${NC} Cache will be cleared automatically when Redis is ready"
+fi
 
 # Check container status
 echo -e "\n${CYAN}${BOLD}Container Status:${NC}"

@@ -298,7 +298,7 @@ Presentation → Application → Domain ← Infrastructure
 ### Current Module Organization
 
 ```
-backend/src/main/java/com/ares/modules/
+backend/src/main/java/com/natixis/ares/modules/
 ├── auth/                    # Authentication module
 │   ├── domain/             # AuthProvider interface
 │   ├── application/        # LoginUseCase, TestConnectionUseCase

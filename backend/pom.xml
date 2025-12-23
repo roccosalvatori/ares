@@ -12,7 +12,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.ares</groupId>
+    <groupId>com.natixis.ares</groupId>
     <artifactId>ares-backend</artifactId>
     <version>1.0.0</version>
     <name>ARES Backend</name>

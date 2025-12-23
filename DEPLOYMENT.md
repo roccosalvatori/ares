@@ -426,7 +426,7 @@ The backend follows a **Modular Monolith** pattern with Clean Architecture princ
 #### Module Structure
 
 ```
-backend/src/main/java/com/ares/modules/
+backend/src/main/java/com/natixis/ares/modules/
 ├── auth/                    # Authentication module
 │   ├── domain/             # Auth domain logic (AuthProvider interface)
 │   ├── application/        # Use cases (LoginUseCase, TestConnectionUseCase)
@@ -483,13 +483,13 @@ The application was containerized and adapted for cloud deployment with external
    - `spring-boot-starter-data-redis` - Spring Data Redis integration
    - `jackson-databind` - JSON serialization for Redis
 
-2. **Created Redis Configuration** (`backend/src/main/java/com/ares/config/RedisConfig.java`):
+2. **Created Redis Configuration** (`backend/src/main/java/com/natixis/ares/config/RedisConfig.java`):
    - Configures Redis connection using Lettuce client
    - Sets up RedisTemplate with proper JSON serialization
    - Supports password-protected Redis instances
    - Configurable via environment variables
 
-3. **Refactored Execution Module** (`backend/src/main/java/com/ares/modules/execution/`):
+3. **Refactored Execution Module** (`backend/src/main/java/com/natixis/ares/modules/execution/`):
    - Removed `ConcurrentHashMap` in-memory cache
    - Implemented modular architecture with domain, application, infrastructure, and presentation layers
    - Added Redis-based caching via `RedisExecutionCache` adapter
@@ -577,12 +577,12 @@ Provides a complete local development environment:
 
 ### 5. Additional Improvements
 
-1. **Health Endpoint** (`backend/src/main/java/com/ares/modules/shared/presentation/HealthController.java`):
+1. **Health Endpoint** (`backend/src/main/java/com/natixis/ares/modules/shared/presentation/HealthController.java`):
    - Dedicated health check endpoint at `/api/health`
    - Located in shared module for reuse across modules
    - Used by Kubernetes liveness/readiness probes
 
-2. **CORS Configuration** (`backend/src/main/java/com/ares/config/SecurityConfig.java`):
+2. **CORS Configuration** (`backend/src/main/java/com/natixis/ares/config/SecurityConfig.java`):
    - Made configurable via `CORS_ALLOWED_ORIGINS` environment variable
    - Defaults to allow all origins for cloud deployment
    - Can be restricted in production

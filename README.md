@@ -7,7 +7,7 @@ A client-server web application built with Angular (frontend) and Spring Boot (b
 ```
 ares/
 ├── backend/
-│   ├── src/main/java/com/ares/
+│   ├── src/main/java/com/natixis/ares/
 │   │   ├── modules/              # Modular monolith structure
 │   │   │   ├── auth/            # Authentication module
 │   │   │   ├── execution/       # Execution module
