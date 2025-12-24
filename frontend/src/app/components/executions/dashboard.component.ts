@@ -1332,6 +1332,7 @@ import { map } from 'rxjs/operators';
       cursor: cell;
       transition: background-color 0.15s ease, border-color 0.15s ease;
       user-select: none;
+      text-align: center;
     }
 
     .executions-table td:last-child {
