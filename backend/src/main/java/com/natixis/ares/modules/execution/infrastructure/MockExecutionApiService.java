@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,17 +17,52 @@ import java.util.List;
 @Component
 public class MockExecutionApiService {
     
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    
     /**
      * Fetches executions from the external API (mocked).
      * Returns sample data matching the API response structure.
+     * Generates executions from the startTimestamp to today.
+     * @param startTimestamp The start timestamp in format YYYY-MM-DD HH:MM:SS (optional)
      */
-    public ApiExecutionResponse fetchExecutions() {
+    public ApiExecutionResponse fetchExecutions(String startTimestamp) {
         ApiExecutionResponse response = new ApiExecutionResponse();
         List<ApiExecutionResponse.ApiExecution> executions = new ArrayList<>();
         
+        // Parse start timestamp or use current time
+        LocalDateTime startDateTime;
+        if (startTimestamp != null && !startTimestamp.trim().isEmpty()) {
+            try {
+                startDateTime = LocalDateTime.parse(startTimestamp, DATE_TIME_FORMATTER);
+            } catch (Exception e) {
+                startDateTime = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+            }
+        } else {
+            startDateTime = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+        }
+        
+        LocalDateTime now = LocalDateTime.now();
+        
         // Generate sample executions matching the API structure
-        for (int i = 0; i < 10; i++) {
+        // Generate executions from startDateTime to now, with some spread
+        long hoursDiff = java.time.Duration.between(startDateTime, now).toHours();
+        if (hoursDiff < 0) {
+            // If startDateTime is in the future, use current time
+            startDateTime = now;
+            hoursDiff = 0;
+        }
+        int executionCount = Math.max(10, Math.min(100, (int)hoursDiff + 1)); // Between 10 and 100 executions
+        
+        for (int i = 0; i < executionCount; i++) {
             ApiExecutionResponse.ApiExecution execution = new ApiExecutionResponse.ApiExecution();
+            
+            // Calculate timestamp - spread from startDateTime to now
+            LocalDateTime execTimestamp;
+            if (hoursDiff > 0 && executionCount > 1) {
+                execTimestamp = startDateTime.plusHours(i * hoursDiff / (executionCount - 1));
+            } else {
+                execTimestamp = startDateTime.plusHours(i);
+            }
             
             execution.setTradeId("4567-morganstanley" + (87654 + i));
             execution.setType("CASH_EXECUTTION");
@@ -43,7 +79,7 @@ public class MockExecutionApiService {
             execution.setContext("default");
             execution.setPrice(BigDecimal.valueOf(96.2 + i * 0.5));
             execution.setOrderId("dytfgdhez:" + (654345678 + i));
-            execution.setTimestamp(LocalDateTime.now().minusHours(i));
+            execution.setTimestamp(execTimestamp);
             execution.setPortfolioId("5C4D-" + (865444 + i));
             execution.setImsUserId("etfs_gateway-uat");
             execution.setMic("XLON");
@@ -51,7 +87,7 @@ public class MockExecutionApiService {
             execution.setMarketTradeId("28554" + i);
             execution.setShortSellType("NONE");
             execution.setTradeType("regular");
-            execution.setEventTimestamp(LocalDateTime.now().minusHours(i));
+            execution.setEventTimestamp(execTimestamp);
             execution.setVersion(0);
             execution.setBrokerageFees(BigDecimal.ZERO);
             execution.setClearingFees(BigDecimal.ZERO);
@@ -69,7 +105,7 @@ public class MockExecutionApiService {
             execution.setImmediateHedgePercent(BigDecimal.ZERO);
             execution.setImmediateHedgeStrategy(null);
             execution.setOriginalOrderPrice(BigDecimal.ZERO);
-            execution.setOrderTimestamp(LocalDateTime.now().minusHours(i).minusMinutes(5));
+            execution.setOrderTimestamp(execTimestamp.minusMinutes(5));
             execution.setExecMarketData("[0x21100011=56yhgfrt8 0x40000000=5Cgfd-876587 0x95c0021=1 0x40010=BATE]");
             execution.setSettlementFees(BigDecimal.ZERO);
             execution.setSettlementDate(null);

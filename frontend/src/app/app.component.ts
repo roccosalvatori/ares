@@ -90,22 +90,31 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
       display: block;
       flex: 1;
       width: 33.33%;
+      height: 100vh;
+      min-height: 100vh;
     }
     router-outlet.full-width {
       width: 100% !important;
       flex: 0 0 100% !important;
       max-width: 100% !important;
       min-width: 100% !important;
+      height: 100vh !important;
+      min-height: 100vh !important;
     }
     router-outlet + * {
       width: 100%;
-      height: 100%;
+      height: 100vh;
+      min-height: 100vh;
+      max-height: 100vh;
       display: block;
     }
     router-outlet.full-width + * {
       width: 100% !important;
       max-width: 100% !important;
       min-width: 100% !important;
+      height: 100vh !important;
+      min-height: 100vh !important;
+      max-height: 100vh !important;
     }
 
     .login-transition-overlay {

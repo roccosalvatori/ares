@@ -25,6 +25,7 @@ public class CachedExecution {
     private LocalDateTime executionTime;
     private String instrumentType;
     private String mic;
+    private String tradeId; // For deduplication
 
     // Constructors
     public CachedExecution() {
@@ -76,6 +77,9 @@ public class CachedExecution {
     public String getMic() { return mic; }
     public void setMic(String mic) { this.mic = mic; }
 
+    public String getTradeId() { return tradeId; }
+    public void setTradeId(String tradeId) { this.tradeId = tradeId; }
+
     /**
      * Convert from Execution domain model to CachedExecution
      */
@@ -96,6 +100,7 @@ public class CachedExecution {
         cached.setExecutionTime(execution.getExecutionTime());
         cached.setInstrumentType(execution.getInstrumentType());
         cached.setMic(execution.getMic());
+        cached.setTradeId(execution.getTradeId());
         return cached;
     }
 
@@ -119,6 +124,7 @@ public class CachedExecution {
         execution.setExecutionTime(this.executionTime);
         execution.setInstrumentType(this.instrumentType);
         execution.setMic(this.mic);
+        execution.setTradeId(this.tradeId);
         return execution;
     }
 }

@@ -43,6 +43,7 @@ public class Execution {
     private String sector;
     private String assetClass;
     private String instrumentType;
+    private String tradeId; // Unique identifier for deduplication
 
     // Constructors
     public Execution() {
@@ -153,5 +154,8 @@ public class Execution {
 
     public String getInstrumentType() { return instrumentType; }
     public void setInstrumentType(String instrumentType) { this.instrumentType = instrumentType; }
+
+    public String getTradeId() { return tradeId; }
+    public void setTradeId(String tradeId) { this.tradeId = tradeId; }
 }
 

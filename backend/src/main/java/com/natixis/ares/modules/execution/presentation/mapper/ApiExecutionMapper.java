@@ -94,6 +94,9 @@ public class ApiExecutionMapper {
         // mic = mic (in table)
         execution.setMic(apiExecution.getMic());
         
+        // tradeId = tradeId (for deduplication, not in table but needed for cache)
+        execution.setTradeId(apiExecution.getTradeId());
+        
         // Fields in table-columns.json but not in mapping rules - set to null
         // These are: isin, status
         execution.setIsin(null);

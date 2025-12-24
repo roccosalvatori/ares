@@ -462,6 +462,8 @@ import { map } from 'rxjs/operators';
       min-width: 100vw !important;
       max-width: 100vw !important;
       height: 100vh;
+      min-height: 100vh;
+      max-height: 100vh;
       background: var(--bg-primary);
       display: flex;
       flex-direction: column;
@@ -470,6 +472,18 @@ import { map } from 'rxjs/operators';
       position: relative;
       margin: 0 !important;
       overflow: hidden;
+    }
+    
+    .dashboard-container > .filters-section {
+      flex-shrink: 0;
+    }
+    
+    .dashboard-container > .dashboard-message {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .filters-section {
@@ -910,9 +924,9 @@ import { map } from 'rxjs/operators';
       color: var(--text-primary);
       width: 100%;
       max-width: 100%;
-      padding: 20px 40px 0 40px;
+      padding: 20px 0 0 0;
       box-sizing: border-box;
-      flex: 1 1 0;
+      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: stretch;
@@ -970,14 +984,14 @@ import { map } from 'rxjs/operators';
 
     .executions-table-container {
       width: 100%;
-      overflow-x: auto;
-      overflow-y: visible;
-      flex: 1 1 0;
+      overflow: hidden;
+      flex: 1;
       min-height: 0;
       display: flex;
       flex-direction: column;
-      padding: 0;
+      padding: 20px 40px 40px 40px;
       margin: 0;
+      box-sizing: border-box;
     }
 
     .executions-table {
@@ -988,11 +1002,11 @@ import { map } from 'rxjs/operators';
       font-size: 0.85rem;
       background: var(--bg-primary);
       color: var(--text-primary);
-      flex: 1;
       border: 1px solid var(--border-color);
       border-radius: 12px;
       overflow: visible;
       table-layout: auto;
+      display: table;
     }
 
     .executions-table thead {
@@ -1380,6 +1394,7 @@ import { map } from 'rxjs/operators';
     /* Prevent text selection during cell selection */
     .executions-table tbody {
       user-select: none;
+      display: table-row-group;
     }
 
     .executions-table td:focus {
@@ -1682,8 +1697,8 @@ import { map } from 'rxjs/operators';
       overflow-y: auto;
       overflow-x: auto;
       min-height: 0;
-      max-height: 100%;
       position: relative;
+      -webkit-overflow-scrolling: touch;
     }
     
     .virtual-spacer {
@@ -2216,8 +2231,8 @@ export class ExecutionsComponent implements OnInit, OnDestroy, AfterViewInit {
     this.hasSearched = false;
     console.log('Search clicked - fetching from API endpoint');
     
-    // Fetch execution data from API endpoint
-    this.executionService.fetchApiExecutions().subscribe({
+    // Fetch execution data from API endpoint with fromDate parameter
+    this.executionService.fetchApiExecutions(this.fromDate).subscribe({
       next: (data) => {
         this.executions = data;
         this.filteredExecutions = data;

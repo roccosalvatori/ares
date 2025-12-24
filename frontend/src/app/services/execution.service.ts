@@ -106,9 +106,11 @@ export class ExecutionService {
   /**
    * Fetches executions from the API endpoint.
    * This triggers the backend to fetch from external API, cache the results, and return them.
+   * @param startTimestamp The start timestamp in format YYYY-MM-DD HH:MM:SS
    */
-  fetchApiExecutions(): Observable<ExecutionData[]> {
-    return this.http.post<ExecutionData[]>(`${this.apiUrl}/test-execution/test-api-executions`, {}).pipe(
+  fetchApiExecutions(startTimestamp?: string): Observable<ExecutionData[]> {
+    const requestBody = startTimestamp ? { startTimestamp } : {};
+    return this.http.post<ExecutionData[]>(`${this.apiUrl}/test-execution/test-api-executions`, requestBody).pipe(
       map(data => {
         // Clear old cache and cache the new API results
         this.executionsCache.clear();

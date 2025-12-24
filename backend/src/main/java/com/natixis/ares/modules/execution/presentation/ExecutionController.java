@@ -66,8 +66,10 @@ public class ExecutionController {
     }
     
     @PostMapping("/test-api-executions")
-    public ResponseEntity<List<ExecutionDataDto>> fetchApiExecutions() {
-        List<Execution> executions = fetchApiExecutionsUseCase.execute();
+    public ResponseEntity<List<ExecutionDataDto>> fetchApiExecutions(
+            @RequestBody(required = false) Map<String, String> requestBody) {
+        String startTimestamp = requestBody != null ? requestBody.get("startTimestamp") : null;
+        List<Execution> executions = fetchApiExecutionsUseCase.execute(startTimestamp);
         List<ExecutionDataDto> dtos = executions.stream()
             .map(mapper::toDto)
             .collect(Collectors.toList());

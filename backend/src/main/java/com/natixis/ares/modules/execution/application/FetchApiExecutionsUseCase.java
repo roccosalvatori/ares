@@ -12,14 +12,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Use case for fetching executions from external API and caching them.
- * This orchestrates the workflow: fetch from API -> map to domain -> cache -> return.
+ * Use case for fetching executions from mock external API and caching them.
+ * This orchestrates the workflow: check cache -> if miss, fetch from API -> merge by tradeId -> return.
  */
 @Service
 public class FetchApiExecutionsUseCase {
-    
-    // Use a special count value (-1) to represent API executions in cache
-    private static final int API_EXECUTIONS_CACHE_COUNT = -1;
     
     private final MockExecutionApiService apiService;
     private final ApiExecutionMapper mapper;
@@ -35,25 +32,67 @@ public class FetchApiExecutionsUseCase {
     }
     
     /**
-     * Fetches executions from external API, maps them to domain model,
-     * stores them in cache, and returns them.
+     * Fetches executions from mock external API, maps them to domain model,
+     * adds them to cache (avoiding duplicates by tradeId), and returns them.
+     * First checks if the date has been loaded - if yes, returns filtered cached data.
+     * If not loaded, fetches from mock API and merges into cache.
+     * @param startTimestamp The start timestamp in format YYYY-MM-DD HH:MM:SS (optional)
      */
-    public List<Execution> execute() {
-        // Always fetch fresh from API and update cache
-        // This ensures side values are always converted correctly
-        ApiExecutionResponse apiResponse = apiService.fetchExecutions();
+    public List<Execution> execute(String startTimestamp) {
+        if (startTimestamp == null || startTimestamp.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        // Check if this date has already been loaded
+        if (cache.isMockApiDateLoaded(startTimestamp)) {
+            // Date already loaded - return filtered executions from cache
+            return cache.getMockApiExecutionsByDate(startTimestamp);
+        }
+        
+        // Date not loaded - fetch from mock API
+        // The API returns executions FROM startTimestamp TO today
+        ApiExecutionResponse apiResponse = apiService.fetchExecutions(startTimestamp);
         
         // Map API response to domain model
         List<Execution> executions = apiResponse.getExecutions().stream()
             .map(mapper::toDomain)
             .collect(Collectors.toList());
         
-        // Cache the results using the special count value
+        // Add executions to cache (will avoid duplicates by tradeId)
         if (!executions.isEmpty()) {
-            cache.put(API_EXECUTIONS_CACHE_COUNT, executions);
+            cache.addMockApiExecutions(executions);
         }
         
-        return executions;
+        // Mark this date as loaded
+        cache.markMockApiDateAsLoaded(startTimestamp);
+        
+        // Return executions filtered by the requested date
+        return cache.getMockApiExecutionsByDate(startTimestamp);
+    }
+    
+    /**
+     * Initializes the cache with today's date executions.
+     * Called on application startup.
+     */
+    public void initializeCache() {
+        // Get today's date at midnight in format YYYY-MM-DD HH:MM:SS
+        java.time.LocalDate today = java.time.LocalDate.now();
+        String todayTimestamp = String.format("%04d-%02d-%02d 00:00:00", 
+            today.getYear(), today.getMonthValue(), today.getDayOfMonth());
+        
+        // Check if today's date has already been loaded
+        if (cache.isMockApiDateLoaded(todayTimestamp)) {
+            // Already loaded - no need to fetch
+            return;
+        }
+        
+        // Fetch and cache today's executions
+        try {
+            execute(todayTimestamp);
+        } catch (Exception e) {
+            System.err.println("Failed to initialize mock API cache with today's date: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
 
