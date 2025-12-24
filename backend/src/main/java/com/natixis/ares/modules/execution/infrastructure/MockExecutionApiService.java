@@ -53,6 +53,11 @@ public class MockExecutionApiService {
         }
         int executionCount = Math.max(10, Math.min(100, (int)hoursDiff + 1)); // Between 10 and 100 executions
         
+        // Generate a unique seed based on the date to ensure unique tradeIds per date
+        String dateSeed = startDateTime.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        long timestampMillis = startDateTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        int baseTradeId = (int)(timestampMillis % 1000000); // Use timestamp as base for uniqueness
+        
         for (int i = 0; i < executionCount; i++) {
             ApiExecutionResponse.ApiExecution execution = new ApiExecutionResponse.ApiExecution();
             
@@ -64,7 +69,8 @@ public class MockExecutionApiService {
                 execTimestamp = startDateTime.plusHours(i);
             }
             
-            execution.setTradeId("4567-morganstanley" + (87654 + i));
+            // Generate unique tradeId based on date seed and index to ensure uniqueness per date
+            execution.setTradeId("MOCK-" + dateSeed + "-" + String.format("%06d", baseTradeId + i));
             execution.setType("CASH_EXECUTTION");
             execution.setExecutionState("INSERTED");
             execution.setUserId("etfs_121_exec_europe_uat");

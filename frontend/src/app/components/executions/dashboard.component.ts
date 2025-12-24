@@ -2211,6 +2211,10 @@ export class ExecutionsComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onFromPickerClosed(): void {
     this.fromPickerOpen = false;
+    // Reapply filters when date picker closes
+    if (this.hasSearched) {
+      this.applyFilters();
+    }
   }
 
   onUntilPickerOpened(): void {
@@ -2220,6 +2224,10 @@ export class ExecutionsComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onUntilPickerClosed(): void {
     this.untilPickerOpen = false;
+    // Reapply filters when date picker closes
+    if (this.hasSearched) {
+      this.applyFilters();
+    }
   }
 
   logout(): void {
@@ -2236,9 +2244,10 @@ export class ExecutionsComponent implements OnInit, OnDestroy, AfterViewInit {
     this.executionService.fetchApiExecutions(this.fromDate).subscribe({
       next: (data) => {
         this.executions = data;
-        this.filteredExecutions = data;
         this.loadCountryCodes(data);
         this.initializeFilters();
+        // Apply filters (including date filters) after loading data
+        this.applyFilters();
         this.hasSearched = true;
         this.isLoading = false;
         // Initialize displayed executions immediately - show first batch
@@ -2280,9 +2289,10 @@ export class ExecutionsComponent implements OnInit, OnDestroy, AfterViewInit {
     this.executionService.fetchRealApiExecutions(this.fromDate).subscribe({
       next: (data) => {
         this.executions = data;
-        this.filteredExecutions = data;
         this.loadCountryCodes(data);
         this.initializeFilters();
+        // Apply filters (including date filters) after loading data
+        this.applyFilters();
         this.hasSearched = true;
         this.isLoading = false;
         // Initialize displayed executions immediately - show first batch
@@ -2896,6 +2906,40 @@ export class ExecutionsComponent implements OnInit, OnDestroy, AfterViewInit {
   applyFilters(): void {
     let filtered = [...this.executions];
 
+    // Apply date filters (fromDate and untilDate)
+    if (this.fromDate || this.untilDate) {
+      filtered = filtered.filter(execution => {
+        const executionTime = execution.executionTime;
+        if (!executionTime) return false;
+
+        try {
+          const execDate = new Date(executionTime);
+          
+          // Filter by fromDate (executions on or after fromDate)
+          if (this.fromDate) {
+            const fromDateObj = this.parseDateTimeString(this.fromDate);
+            if (fromDateObj && execDate < fromDateObj) {
+              return false;
+            }
+          }
+
+          // Filter by untilDate (executions on or before untilDate)
+          if (this.untilDate) {
+            const untilDateObj = this.parseDateTimeString(this.untilDate);
+            if (untilDateObj && execDate > untilDateObj) {
+              return false;
+            }
+          }
+
+          return true;
+        } catch (e) {
+          console.error('Error parsing execution time:', e);
+          return false;
+        }
+      });
+    }
+
+    // Apply column filters
     this.columnFilters.forEach((filter, colIndex) => {
       if (!filter || filter.selectedValues.size === 0) {
         return;
@@ -2917,6 +2961,39 @@ export class ExecutionsComponent implements OnInit, OnDestroy, AfterViewInit {
       this.tableWrapperElement.scrollTop = 0;
     }
     this.updateVisibleRows();
+  }
+
+  private parseDateTimeString(dateTimeStr: string): Date | null {
+    if (!dateTimeStr || !dateTimeStr.trim()) {
+      return null;
+    }
+
+    try {
+      // Parse format: YYYY-MM-DD HH:MM:SS
+      const parts = dateTimeStr.trim().split(' ');
+      if (parts.length !== 2) {
+        return null;
+      }
+
+      const dateParts = parts[0].split('-');
+      const timeParts = parts[1].split(':');
+
+      if (dateParts.length !== 3 || timeParts.length !== 3) {
+        return null;
+      }
+
+      const year = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+      const day = parseInt(dateParts[2], 10);
+      const hour = parseInt(timeParts[0], 10);
+      const minute = parseInt(timeParts[1], 10);
+      const second = parseInt(timeParts[2], 10);
+
+      return new Date(year, month, day, hour, minute, second);
+    } catch (e) {
+      console.error('Error parsing date time string:', dateTimeStr, e);
+      return null;
+    }
   }
 
   // Set cell value (for paste functionality)
