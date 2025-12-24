@@ -123,10 +123,12 @@ export class ExecutionService {
   /**
    * Fetches executions from the real API endpoint.
    * This triggers the backend to fetch from real external API, cache the results, and return them.
+   * @param startTimestamp The start timestamp in format YYYY-MM-DD HH:MM:SS
    */
-  fetchRealApiExecutions(): Observable<ExecutionData[]> {
+  fetchRealApiExecutions(startTimestamp?: string): Observable<ExecutionData[]> {
     this.clearCache(); // Clear cache before fetching new API data
-    const request$ = this.http.post<ExecutionData[]>(`${this.apiUrl}/test-execution/test-real`, {}).pipe(
+    const requestBody = startTimestamp ? { startTimestamp } : {};
+    const request$ = this.http.post<ExecutionData[]>(`${this.apiUrl}/test-execution/test-real`, requestBody).pipe(
       map(data => {
         this.executionsCache.set(-2, [...data]); // Cache real API results with a special key
         return data;

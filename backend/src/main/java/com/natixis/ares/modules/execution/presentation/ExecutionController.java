@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -74,8 +75,10 @@ public class ExecutionController {
     }
     
     @PostMapping("/test-real")
-    public ResponseEntity<List<ExecutionDataDto>> fetchRealApiExecutions() {
-        List<Execution> executions = fetchRealApiExecutionsUseCase.execute();
+    public ResponseEntity<List<ExecutionDataDto>> fetchRealApiExecutions(
+            @RequestBody(required = false) Map<String, String> requestBody) {
+        String startTimestamp = requestBody != null ? requestBody.get("startTimestamp") : null;
+        List<Execution> executions = fetchRealApiExecutionsUseCase.execute(startTimestamp);
         List<ExecutionDataDto> dtos = executions.stream()
             .map(mapper::toDto)
             .collect(Collectors.toList());

@@ -35,7 +35,8 @@ import { FormsModule } from '@angular/forms';
             [class.other-month]="day.otherMonth"
             [class.selected]="isDateSelected(day.date)"
             [class.today]="isToday(day.date)"
-            (click)="selectDate(day.date); $event.stopPropagation()">
+            (mousedown)="selectDate(day.date); $event.stopPropagation(); $event.preventDefault()"
+            (click)="$event.stopPropagation()">
             {{ day.day }}
           </div>
         </div>
@@ -398,11 +399,34 @@ export class DatetimePickerComponent implements OnInit, OnChanges {
     if (this.isOpen !== this.showPicker) {
       this.showPicker = this.isOpen;
     }
+    
+    // Parse value when it changes from parent
+    if (this.value) {
+      this.parseValue(this.value);
+    } else if (this.value === '') {
+      // Clear selection if value is cleared
+      this.selectedDate = null;
+      this.hour = 0;
+      this.minute = 0;
+      this.second = 0;
+    }
   }
 
   openPicker(): void {
     if (!this.showPicker) {
       this.showPicker = true;
+      // Parse value when opening picker if it exists
+      if (this.value) {
+        this.parseValue(this.value);
+      } else if (!this.selectedDate) {
+        // If no value and no selected date, initialize with current date/time
+        const now = new Date();
+        this.selectedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        this.currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        this.hour = now.getHours();
+        this.minute = now.getMinutes();
+        this.second = now.getSeconds();
+      }
       this.opened.emit();
     }
   }
@@ -415,7 +439,10 @@ export class DatetimePickerComponent implements OnInit, OnChanges {
   }
 
   handleDocumentClick(event: MouseEvent): void {
+    // Don't close if clicking inside the picker or wrapper
     const target = event.target as HTMLElement;
+    if (!target) return;
+    
     const pickerWrapper = target.closest('.datetime-picker-wrapper');
     const picker = target.closest('.datetime-picker');
     
@@ -426,24 +453,40 @@ export class DatetimePickerComponent implements OnInit, OnChanges {
   }
 
   parseValue(value: string): void {
-    if (!value) return;
+    if (!value) {
+      this.selectedDate = null;
+      this.hour = 0;
+      this.minute = 0;
+      this.second = 0;
+      return;
+    }
     
     try {
       const [datePart, timePart] = value.split(' ');
-      if (datePart && timePart) {
+      if (datePart) {
         const [year, month, day] = datePart.split('-').map(Number);
-        const [hour, minute, second] = timePart.split(':').map(Number);
         
         if (year && month && day) {
           this.selectedDate = new Date(year, month - 1, day);
           this.currentMonth = new Date(year, month - 1, 1);
-          this.hour = hour || 0;
-          this.minute = minute || 0;
-          this.second = second || 0;
+          
+          // Parse time if provided
+          if (timePart) {
+            const [hour, minute, second] = timePart.split(':').map(Number);
+            this.hour = isNaN(hour) ? 0 : hour;
+            this.minute = isNaN(minute) ? 0 : minute;
+            this.second = isNaN(second) ? 0 : second;
+          } else {
+            // Default to midnight if no time provided
+            this.hour = 0;
+            this.minute = 0;
+            this.second = 0;
+          }
         }
       }
     } catch (e) {
       // Invalid format, ignore
+      console.warn('Failed to parse date value:', value, e);
     }
   }
 
@@ -505,12 +548,13 @@ export class DatetimePickerComponent implements OnInit, OnChanges {
   selectDate(date: Date): void {
     const normalized = this.normalizeDate(date);
     this.selectedDate = new Date(normalized);
-    // If no time is set yet, initialize with current time or default to 00:00:00
-    if (this.hour === 0 && this.minute === 0 && this.second === 0) {
-      const now = new Date();
-      this.hour = now.getHours();
-      this.minute = now.getMinutes();
-      this.second = now.getSeconds();
+    // If no time is set yet, keep existing time or default to 00:00:00
+    // Don't automatically set to current time - let user set it manually
+    if (this.selectedDate && this.hour === 0 && this.minute === 0 && this.second === 0 && !this.value) {
+      // Only set to midnight if there's no existing value
+      this.hour = 0;
+      this.minute = 0;
+      this.second = 0;
     }
     this.updateDateTime();
   }

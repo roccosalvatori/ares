@@ -36,10 +36,11 @@ public class FetchRealApiExecutionsUseCase {
     /**
      * Fetches executions from real external API, maps them to domain model,
      * stores them in cache, and returns them.
+     * @param startTimestamp The start timestamp in format YYYY-MM-DD HH:MM:SS (optional)
      */
-    public List<Execution> execute() {
+    public List<Execution> execute(String startTimestamp) {
         // Always fetch fresh from real API and update cache
-        ApiExecutionResponse apiResponse = apiService.fetchExecutions();
+        ApiExecutionResponse apiResponse = apiService.fetchExecutions(startTimestamp);
         
         // Map API response to domain model
         List<Execution> executions = apiResponse.getExecutions().stream()
